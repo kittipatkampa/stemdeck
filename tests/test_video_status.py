@@ -58,6 +58,25 @@ def test_youtube_video_ok(tmp_path):
     assert job.video_status == "ok"
 
 
+def test_youtube_video_faststart_remux_is_best_effort(tmp_path):
+    """A successful fetch runs faststart remux; failure keeps the original file."""
+    job_dir = tmp_path / "abcdefabc438"
+    job_dir.mkdir(parents=True, exist_ok=True)
+    video = job_dir / "video.mp4"
+    video.write_bytes(b"fake mp4 payload")
+    _FakeYDL.behaviour = "ok"
+    _FakeYDL.job_dir = job_dir
+    with (
+        patch.object(dl_mod, "YoutubeDL", _FakeYDL),
+        patch.object(dl_mod, "_remux_video_faststart") as remux,
+    ):
+        job = Job(id="abcdefabc438")
+        dl_mod._download_video_track(job, "https://www.youtube.com/watch?v=x", job_dir)
+    remux.assert_called_once_with(job_dir)
+    assert job.has_video is True
+    assert video.is_file()
+
+
 def test_youtube_no_video_offered_is_not_a_failure(tmp_path):
     """yt-dlp returned cleanly with nothing to save. Normal, not news."""
     job = _run_video_fetch(tmp_path, "nofile")

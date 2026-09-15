@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import logging
 import re
+import subprocess
 import time
 import urllib.parse
 from pathlib import Path
@@ -429,6 +430,42 @@ def expand_playlist(url: str, limit: int) -> dict:
     }
 
 
+def _remux_video_faststart(job_dir: Path) -> None:
+    """Move the moov atom to the start so HTML5 can seek before the full file
+    is downloaded. Best-effort: on failure the original file is kept."""
+    from app.core.config import ffmpeg_executable
+
+    video = job_dir / "video.mp4"
+    if not video.is_file() or video.stat().st_size == 0:
+        return
+    tmp = job_dir / "video.faststart.mp4"
+    cmd = [
+        ffmpeg_executable(),
+        "-nostdin",
+        "-loglevel",
+        "error",
+        "-i",
+        str(video),
+        "-c",
+        "copy",
+        "-movflags",
+        "+faststart",
+        "-y",
+        str(tmp),
+    ]
+    try:
+        proc = subprocess.run(cmd, capture_output=True, timeout=300)
+        if proc.returncode == 0 and tmp.is_file() and tmp.stat().st_size > 0:
+            tmp.replace(video)
+            return
+        tmp.unlink(missing_ok=True)
+        err = (proc.stderr or b"")[:200].decode("utf-8", errors="replace")
+        logger.warning("video faststart remux failed (keeping original): %s", err)
+    except (OSError, subprocess.SubprocessError) as exc:
+        tmp.unlink(missing_ok=True)
+        logger.warning("video faststart remux failed (keeping original): %s", exc)
+
+
 def _download_video_track(job: Job, url: str, job_dir: Path, *, use_cookies: bool = False) -> None:
     """Best-effort: download a video-only H.264/MP4 stream to video.mp4 for the
     MP4 export (issue #219). The audio source is downloaded separately as
@@ -485,6 +522,7 @@ def _download_video_track(job: Job, url: str, job_dir: Path, *, use_cookies: boo
 
     video = job_dir / "video.mp4"
     if video.is_file() and video.stat().st_size > 0:
+        _remux_video_faststart(job_dir)
         job.has_video = True
         job.video_status = "ok"
     else:

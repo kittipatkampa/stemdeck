@@ -88,10 +88,40 @@ def _peaks(points: int = 400) -> list[list[float]]:
     return out
 
 
-def _build_job(jobs_dir: Path, job_id: str, title: str, seconds: int) -> dict:
+def _make_fixture_video(job_dir: Path) -> None:
+    """Tiny silent MP4 so the karaoke video pane can load in browser tests."""
+    import subprocess
+
+    out = job_dir / "video.mp4"
+    subprocess.run(
+        [
+            "ffmpeg",
+            "-nostdin",
+            "-loglevel",
+            "error",
+            "-y",
+            "-f",
+            "lavfi",
+            "-i",
+            "color=c=black:s=64x64:d=0.3:r=10",
+            "-c:v",
+            "mpeg4",
+            "-an",
+            str(out),
+        ],
+        check=True,
+        timeout=30,
+    )
+
+
+def _build_job(jobs_dir: Path, job_id: str, title: str, seconds: int, *, with_video: bool = False) -> dict:
     """Write one finished job's files and return its registry record."""
-    stems_dir = jobs_dir / job_id / "stems"
+    job_dir = jobs_dir / job_id
+    stems_dir = job_dir / "stems"
     stems_dir.mkdir(parents=True, exist_ok=True)
+
+    if with_video:
+        _make_fixture_video(job_dir)
 
     for index, name in enumerate(STEMS):
         (stems_dir / f"{name}.wav").write_bytes(_wav_bytes(220.0 * (index + 1), seconds))
@@ -155,12 +185,14 @@ def _build_job(jobs_dir: Path, job_id: str, title: str, seconds: int) -> dict:
         # A list of strings deserialises without error and then leaves the
         # studio with nothing to play.
         "stems": [{"name": name, "url": f"/api/jobs/{job_id}/stems/{name}.wav"} for name in STEMS],
+        "has_video": with_video,
+        "video_status": "ok" if with_video else None,
     }
 
 
 def seed(jobs_dir: Path) -> list[str]:
     records = [
-        _build_job(jobs_dir, JOB_ID, TITLE, DURATION_SEC),
+        _build_job(jobs_dir, JOB_ID, TITLE, DURATION_SEC, with_video=True),
         _build_job(jobs_dir, SIBLING_JOB_ID, SIBLING_TITLE, SIBLING_DURATION_SEC),
     ]
     (jobs_dir / "registry.json").write_text(

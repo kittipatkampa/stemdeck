@@ -336,9 +336,13 @@ const en = {
 
   "panels.analysis": "Analysis",
 
+  "panels.video": "Video",
+
   "panels.timeline": "Timeline",
 
   "panels.analysisTitle": "Show or hide the track analysis",
+
+  "panels.videoTitle": "Show or hide the video pane",
 
   "panels.sectionsTitle": "Show or hide the sections bar",
 
@@ -349,6 +353,15 @@ const en = {
   "panels.collapse": "Collapse",
 
   "panels.allTitle": "Show or hide every panel",
+
+  "video.paneTitle": "Video",
+
+  "video.fullscreenTitle": "Fullscreen video",
+
+  "video.fetchFailed": "Video could not be loaded for this track.",
+
+  "video.resizeAria": "Resize video pane",
+
   "mixer.hint": "Drag fader · M/S",
   "stemsPanel.ariaLabel": "Stems",
 

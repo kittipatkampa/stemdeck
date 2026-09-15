@@ -31,6 +31,7 @@ import { computeCountIn, defaultGrouping, normaliseGrouping } from "./metronome.
 import { t } from "./i18n.js";
 import { pitchBlockedKey } from "./pitchBus.js";
 import { refitFooter } from "./footerFit.js";
+import { tickVideoPlayback } from "./videoPlayback.js";
 
 // Zoom range. 1 is the whole track fitted to the panel; there is nothing below
 // it to show, so it is the floor rather than a soft default.
@@ -109,6 +110,7 @@ export function setPlayheadTime(sec) {
   updatePlayheadMarker(next);
   updateFooterTimes(next);
   updatePresencePlayhead(next);
+  tickVideoPlayback();
 }
 
 // Spacing of the timeline's labelled ticks. Shared by the ruler above the
@@ -519,6 +521,7 @@ export function togglePlayPause() {
     // the play-button visual that the ws "pause" handler normally toggles must
     // be driven here directly.
     if (eng) playBtn.classList.remove("playing");
+    tickVideoPlayback();
     return;
   }
   const ctx = tx.audioContext;
@@ -553,6 +556,7 @@ export function stopTransport() {
   metronome?.cancelCountIn?.(); // a count-in in progress must not outlive Stop
   tx.setTime(loopEnabled ? loopStart : 0); // engine: setTime → onTime → stop visual
   if (eng) playBtn.classList.remove("playing");
+  tickVideoPlayback();
 }
 
 export function toggleLoop() {
@@ -957,6 +961,7 @@ function applySpeed(rate) {
     btn.setAttribute("aria-checked", on ? "true" : "false");
   }
   audioEngine?.setPlaybackRate?.(clamped);
+  tickVideoPlayback();
   if (multitrack) {
     for (const a of (multitrack.audios ?? [])) {
       try { a.playbackRate = clamped; } catch { /* noop */ }

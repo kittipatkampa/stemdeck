@@ -41,6 +41,10 @@ document.addEventListener("click", (e) => {
 // is already watched by a ResizeObserver.
 const PANEL_STORE_PREFIX = "stemdeck.panel.";
 
+function visiblePanelToggles() {
+  return [...document.querySelectorAll(".daw-panel-toggle[data-panel]:not(.hidden)")];
+}
+
 function wirePanelToggles() {
   const app = document.querySelector(".app");
   const toggles = [...document.querySelectorAll(".daw-panel-toggle[data-panel]")];
@@ -77,7 +81,7 @@ function wirePanelToggles() {
     });
   }
 
-  wireAllToggle(app, toggles.map((btn) => btn.dataset.panel), apply, persist);
+  wireAllToggle(app, apply, persist);
 }
 
 // "All" clears the three panels in one press and brings them back in one more.
@@ -98,16 +102,23 @@ function wirePanelToggles() {
 //
 // It stores nothing. The state is derived from .app either way, so there is no
 // fourth flag to disagree with the other three.
-function wireAllToggle(app, names, apply, persist) {
+function wireAllToggle(app, apply, persist) {
   const btn = document.querySelector(".daw-panel-toggle[data-panel-all]");
   if (!btn) return;
 
-  const hiddenCount = () =>
-    names.filter((name) => app.classList.contains(`panel-${name}-off`)).length;
+  const activeNames = () => visiblePanelToggles().map((b) => b.dataset.panel);
 
-  const sync = () => btn.setAttribute("aria-pressed", String(hiddenCount() < names.length));
+  const hiddenCount = () =>
+    activeNames().filter((name) => app.classList.contains(`panel-${name}-off`)).length;
+
+  const sync = () => {
+    const names = activeNames();
+    btn.setAttribute("aria-pressed", String(names.length === 0 || hiddenCount() < names.length));
+  };
 
   btn.addEventListener("click", () => {
+    const names = activeNames();
+    if (!names.length) return;
     // Anything still on screen means the press is asking to clear it away.
     const show = hiddenCount() === names.length;
     for (const name of names) {
