@@ -416,6 +416,8 @@ export function createAudioEngine(stems, { onTime, onEnded, context } = {}) {
     seek,
     setTime: seek, // alias to match the multitrack interface used by transport.js
     isPlaying: () => playing,
+    isAwaitingStart: () => playing && ctx.currentTime < startCtxTime,
+    getPlaybackRate: () => _playbackRate,
     // This engine honours play(leadIn) for a count-in; the streaming/chunked
     // paths do not, so the transport checks this before scheduling one.
     supportsCountIn: true,

@@ -1194,6 +1194,23 @@ def _safe_title(title: str | None) -> str:
     return _title_slug(title) or "stems"
 
 
+@router.api_route("/jobs/{job_id}/video-track.mp4", methods=["GET", "HEAD"], response_model=None)
+async def get_video_track(job_id: str) -> FileResponse:
+    """Stream the job's preserved silent video for in-app playback.
+
+    Unlike GET /video.mp4 (a mixdown download with Content-Disposition:
+    attachment), this serves video.mp4 inline so the browser can Range-seek."""
+    if not JOB_ID_RE.match(job_id):
+        raise HTTPException(status_code=404, detail="job not found")
+    job = registry_get(job_id)
+    if job is None or job.status != "done" or not job.has_video:
+        raise HTTPException(status_code=404, detail="no video track for this job")
+    video_path = (JOBS_DIR / job_id / "video.mp4").resolve()
+    if not video_path.is_file() or not video_path.is_relative_to(JOBS_DIR.resolve()):
+        raise HTTPException(status_code=404, detail="no video track for this job")
+    return FileResponse(video_path, media_type="video/mp4")
+
+
 @router.get("/jobs/{job_id}/video.mp4", response_model=None)
 async def get_video_mixdown(
     job_id: str,

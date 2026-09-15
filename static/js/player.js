@@ -30,6 +30,7 @@ import {
 } from "./state.js";
 import { createAudioEngine, estimateDecodedBytes } from "./audioEngine.js";
 import { createChunkedAudioEngine } from "./chunkedAudioEngine.js";
+import { setVideoTrackUi, tickVideoAt, pauseVideoPlayback } from "./videoPlayback.js";
 import { createPlaybackContext } from "./audioContext.js";
 import { effectivePitch } from "./pitchBus.js";
 import { addVisualOnlyStems, buildPlaybackStems } from "./playbackStems.js";
@@ -823,6 +824,7 @@ export function destroyPlayer() {
   teardownMetronome();
   updateMetronomeAvailability(null, t("click.reason.loadTrack"));
   setExportClickAvailable(false);
+  setVideoTrackUi(false);
   if (audioEngine) {
     audioEngine.destroy();
     setAudioEngine(null);
@@ -1142,6 +1144,7 @@ export function wireUpAudio(jobId, stems, duration, thumbnail, mixUrl = null, ti
   // "failed" is the only status worth showing. "unavailable" means the source
   // genuinely has no video stream, which is not a fault and not news (#436).
   exportWrap?.classList.toggle("video-failed", videoStatus === "failed");
+  setVideoTrackUi(!!hasVideo, videoStatus, jobId);
   applyStemSelectionFilter(new Set(stems.map((s) => s.name)));
   updateFooterTrack({ thumbnail, stemCount: stems.filter((s) => s.name !== "original").length });
 
@@ -1436,10 +1439,15 @@ export function wireUpAudio(jobId, stems, duration, thumbnail, mixUrl = null, ti
         updateFooterTimes(t);
         updatePresencePlayhead(t);
         updateStopVisual();
+        if (_currentHasVideo) tickVideoAt(audioEngine, t);
       };
       teardownMetronome();
       if (audioEngine) { audioEngine.destroy(); setAudioEngine(null); }
-      const onEnded = () => { playBtn.classList.remove("playing"); updateStopVisual(); };
+      const onEnded = () => {
+        playBtn.classList.remove("playing");
+        updateStopVisual();
+        if (_currentHasVideo) pauseVideoPlayback();
+      };
       // Engine bring-up, callable twice: the chunked path falls back to
       // "fulldecode" when peaks.json is missing (legacy jobs), because the
       // backend's documented degradation for missing peaks is client-side

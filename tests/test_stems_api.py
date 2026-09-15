@@ -831,6 +831,43 @@ def test_video_mux_happy(client, tmp_path):
     assert r.content[4:8] == b"ftyp"
 
 
+# --- Silent video track for in-app playback ---
+
+
+def test_video_track_inline_serve(client, tmp_path):
+    _skip_without_ffmpeg()
+    job = _done_job_with_stems(tmp_path, "abcdef000024", ["vocals"])
+    _make_video_file(tmp_path, job.id)
+    job.has_video = True
+    _jobs[job.id] = job
+    r = client.get(f"/api/jobs/{job.id}/video-track.mp4")
+    assert r.status_code == 200
+    assert r.headers["content-type"] == "video/mp4"
+    assert "attachment" not in (r.headers.get("content-disposition") or "").lower()
+    assert r.content[4:8] == b"ftyp"
+
+
+def test_video_track_404_without_file(client, tmp_path):
+    job = _done_job_with_stems(tmp_path, "abcdef000025", ["vocals"])
+    job.has_video = True
+    _jobs[job.id] = job
+    r = client.get(f"/api/jobs/{job.id}/video-track.mp4")
+    assert r.status_code == 404
+
+
+def test_video_track_404_when_has_video_false(client, tmp_path):
+    _skip_without_ffmpeg()
+    job = _done_job_with_stems(tmp_path, "abcdef000026", ["vocals"])
+    _make_video_file(tmp_path, job.id)
+    r = client.get(f"/api/jobs/{job.id}/video-track.mp4")
+    assert r.status_code == 404
+
+
+def test_video_track_rejects_malformed_job_id(client):
+    r = client.get("/api/jobs/ZZZ/video-track.mp4")
+    assert r.status_code == 404
+
+
 # ─── WAV/FLAC headers must be finalised (seekable output, not pipe:1) ─────
 
 

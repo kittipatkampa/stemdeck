@@ -173,6 +173,11 @@
                   title="Show or hide the timeline" data-i18n-title="panels.timelineTitle" data-i18n-aria-label="panels.timelineTitle">
             <span data-i18n="panels.timeline">Timeline</span>
           </button>
+          <span class="daw-panel-toggles-sep daw-panel-video-sep hidden" aria-hidden="true">-</span>
+          <button class="daw-panel-toggle hidden" type="button" data-panel="video" id="panelVideoToggle" aria-pressed="true"
+                  title="Show or hide the video pane" data-i18n-title="panels.videoTitle" data-i18n-aria-label="panels.videoTitle">
+            <span data-i18n="panels.video">Video</span>
+          </button>
         </div>
         </div><!-- /.daw-composer-stack -->
 
@@ -419,6 +424,25 @@
 
             <!-- Hidden compat -->
             <div style="display:none" aria-hidden="true"><div id="loudness-card"></div></div>
+          </div>
+
+          <!-- Karaoke video (silent picture synced to the mixer clock) -->
+          <div class="daw-video-pane hidden" id="dawVideoPane" aria-hidden="true">
+            <div class="daw-video-pane-head">
+              <span class="daw-label-title" data-i18n="video.paneTitle">Video</span>
+              <span class="daw-video-status hidden" id="dawVideoStatus" role="status" data-i18n="video.fetchFailed">Video could not be loaded for this track.</span>
+              <button class="daw-iconbtn daw-video-fullscreen" type="button" id="dawVideoFullscreen"
+                      title="Fullscreen video" aria-label="Fullscreen video" data-i18n-title="video.fullscreenTitle" data-i18n-aria-label="video.fullscreenTitle">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                  <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/>
+                </svg>
+              </button>
+            </div>
+            <div class="daw-video-frame" id="dawVideoFrame">
+              <video id="dawVideo" class="daw-video" muted playsinline preload="auto"></video>
+            </div>
+            <div class="daw-video-resize" id="dawVideoResize" role="separator" aria-orientation="horizontal"
+                 aria-label="Resize video pane" data-i18n-aria-label="video.resizeAria"></div>
           </div>
 
           <!-- Sections bar -->

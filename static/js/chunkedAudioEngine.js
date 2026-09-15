@@ -779,6 +779,8 @@ export function createChunkedAudioEngine(stems, { onTime, onEnded, context } = {
     seek,
     setTime: seek,
     isPlaying: () => playing,
+    isAwaitingStart: () => playing && ctx.currentTime < _startCtxTime,
+    getPlaybackRate: () => _playbackRate,
     // This engine honours play(leadIn) for a count-in (see play() above); the
     // transport checks this before scheduling one.
     supportsCountIn: true,
