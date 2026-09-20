@@ -159,12 +159,17 @@ try:
         children = psutil.Process(proc.pid).children(recursive=True)
         proc.send_signal(signal.CTRL_BREAK_EVENT)
         proc.wait(timeout=30)
-        assert proc.returncode == 0, proc.returncode
+        # Uvicorn re-raises the console signal after its graceful shutdown.
+        # Windows may therefore report STATUS_CONTROL_C_EXIT rather than zero.
+        assert proc.returncode in (0, 0xC000013A, -1073741510), proc.returncode
         for _ in range(15):
             if not any(child.is_running() for child in children):
                 break
             time.sleep(1)
         assert not any(child.is_running() for child in children), "backend/worker survived shutdown"
+        assert "Application shutdown complete." in (args.logs / "backend.log").read_text(
+            encoding="utf-8", errors="replace"
+        ), "backend did not complete graceful shutdown"
         checks.append("graceful shutdown without surviving child processes")
     result = {"automated": "passed", "checks": checks, "desktopAcceptance": "pending"}
 except BaseException as exc:
