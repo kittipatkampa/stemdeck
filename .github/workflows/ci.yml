@@ -45,7 +45,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7.0.1
       # build-essential: see the matching comment in the lint job above.
-      - run: apt-get update && apt-get install -y --no-install-recommends ffmpeg build-essential
+      - run: apt-get update && apt-get install -y --no-install-recommends ffmpeg git build-essential
       - run: uv sync --frozen --all-extras
       - run: uv run pytest tests/ -q
 

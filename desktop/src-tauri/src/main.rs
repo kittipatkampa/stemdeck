@@ -2514,7 +2514,7 @@ fn classify_cuda_install_error(stderr: &str) -> String {
 const CPU_TORCH_VERSION: &str = "2.6.0";
 /// Matches CPU_TORCH_VERSION and the version uv.lock resolves. Move the two
 /// together or the ops registration breaks; see torchvision_version_for_tag.
-#[cfg(not(target_os = "macos"))]
+#[cfg(any(not(target_os = "macos"), test))]
 const CPU_TORCHVISION_VERSION: &str = "0.21.0";
 
 /// What a line of pip's output means, for the setup screen.

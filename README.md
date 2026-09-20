@@ -139,7 +139,7 @@ If you need speed, quality, mobile access, or the extra musician tooling, the co
 
 ## Download
 
-Pre-built installers and zips are attached to each [upstream GitHub Release](https://github.com/stemdeckapp/stemdeck/releases). These are builds of `stemdeckapp/stemdeck`, not this `kittipatkampa/stemdeck` fork. To run this fork's synced video playback changes, follow [Build from Source](#build-from-source); the web server is the simplest way to run them locally.
+Pre-built installers and zips are attached to each [upstream GitHub Release](https://github.com/stemdeckapp/stemdeck/releases). These are builds of `stemdeckapp/stemdeck`, not this `kittipatkampa/stemdeck` fork. For this fork's Windows portable preview, see the Windows section below. To run the fork on other platforms or from source, follow [Build from Source](#build-from-source).
 
 **macOS**
 

@@ -121,9 +121,9 @@ try:
         checks.append("relocated backend health and version")
         for path in (
             "/",
-            "/static/js/videoPlayback.js",
-            "/static/js/videoSync.js",
-            "/static/js/releaseSource.js",
+            "/js/videoPlayback.js",
+            "/js/videoSync.js",
+            "/js/releaseSource.js",
         ):
             assert request(path).status == 200, path
         checks.append("static assets including video and fork release discovery")
