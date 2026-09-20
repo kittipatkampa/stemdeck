@@ -118,7 +118,9 @@ def _make_fixture_video(job_dir: Path) -> None:
     )
 
 
-def _build_job(jobs_dir: Path, job_id: str, title: str, seconds: int, *, with_video: bool = False) -> dict:
+def _build_job(
+    jobs_dir: Path, job_id: str, title: str, seconds: int, *, with_video: bool = False
+) -> dict:
     """Write one finished job's files and return its registry record."""
     job_dir = jobs_dir / job_id
     stems_dir = job_dir / "stems"
