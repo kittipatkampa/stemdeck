@@ -247,18 +247,47 @@ Open <http://localhost:8000>.
 
 #### Windows (PowerShell)
 
-Install prerequisites:
-- [uv](https://docs.astral.sh/uv/getting-started/installation/) — `winget install astral-sh.uv`
-- [ffmpeg](https://ffmpeg.org/download.html) — `winget install Gyan.FFmpeg` (or Chocolatey: `choco install ffmpeg`)
+These steps run this fork, including synced video playback, in a browser on your Windows computer. WSL and a native desktop build are not required.
+
+**1. Install the prerequisites.** Open PowerShell and run:
 
 ```powershell
-uv sync
+winget install --id Git.Git -e
+winget install --id astral-sh.uv -e
+winget install --id Gyan.FFmpeg -e
+```
+
+If `winget` is unavailable, install [Git for Windows](https://git-scm.com/downloads/win), [uv](https://docs.astral.sh/uv/getting-started/installation/), and [FFmpeg](https://ffmpeg.org/download.html) manually. Make sure their commands are on your PATH.
+
+**2. Close and reopen PowerShell** so it picks up the installed commands. Check that each is available:
+
+```powershell
+git --version
+uv --version
+ffmpeg -version
+```
+
+**3. Download this fork and install its Python dependencies.** Run this from a folder where you want to keep the app:
+
+```powershell
+git clone https://github.com/kittipatkampa/stemdeck.git stemdeck
+cd stemdeck
+uv sync --python 3.12
+```
+
+If you already cloned this fork using the instructions above, open PowerShell in that existing `stemdeck` folder and run only `uv sync --python 3.12`. uv downloads Python 3.12 if needed and creates the project's virtual environment. Initial setup and the first stem separation need internet access to download dependencies and model files.
+
+**4. Start the app:**
+
+```powershell
 uv run uvicorn app.main:app --host 127.0.0.1 --port 8000 --timeout-graceful-shutdown 5
 ```
 
-Open <http://localhost:8000>.
+Open <http://localhost:8000>. Keep PowerShell open while using the app. Press **Ctrl+C** in PowerShell to stop it.
 
-> `run.sh` is macOS/Linux only. On Windows use the PowerShell commands above, or run inside WSL.
+**Later launches:** open PowerShell in the same `stemdeck` folder, run the command in step 4, and open the same browser address. You do not need to clone the repository or install dependencies again for each launch.
+
+> `run.sh` is macOS/Linux only. On Windows use the PowerShell commands above. The ZIP downloads linked in [Download](#download) are upstream desktop builds, not builds of this fork.
 
 **NVIDIA GPU (CUDA):** install the CUDA-enabled torch build before starting:
 
