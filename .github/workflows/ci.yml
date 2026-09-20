@@ -74,6 +74,7 @@ jobs:
       - run: uv sync --frozen --all-extras
       - run: npm ci
       - run: npx playwright install --with-deps chromium
+      - run: sudo apt-get update && sudo apt-get install -y --no-install-recommends ffmpeg
       - run: npx playwright test
       - if: failure()
         uses: actions/upload-artifact@v7.0.1
