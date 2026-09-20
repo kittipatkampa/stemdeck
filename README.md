@@ -5,11 +5,11 @@
 **Free, local stem separation. No account. No upload. No subscription.**
 
 <div align="center">
-  <a href="https://github.com/stemdeckapp/stemdeck/actions/workflows/ci.yml"><img src="https://github.com/stemdeckapp/stemdeck/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
-  <a href="https://github.com/stemdeckapp/stemdeck/stargazers"><img src="https://img.shields.io/github/stars/stemdeckapp/stemdeck?style=flat-square" alt="GitHub Stars"></a>
-  <a href="https://github.com/stemdeckapp/stemdeck/releases"><img src="https://img.shields.io/github/downloads/stemdeckapp/stemdeck/total?style=flat-square&color=52c65f" alt="Total Downloads"></a>
-  <a href="https://github.com/stemdeckapp/stemdeck/releases/latest"><img src="https://img.shields.io/github/v/release/stemdeckapp/stemdeck?style=flat-square" alt="Latest Release"></a>
-  <a href="https://github.com/stemdeckapp/stemdeck/blob/main/LICENSE"><img src="https://img.shields.io/github/license/stemdeckapp/stemdeck?style=flat-square" alt="License"></a>
+  <a href="https://github.com/kittipatkampa/stemdeck/actions/workflows/ci.yml"><img src="https://github.com/kittipatkampa/stemdeck/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
+  <a href="https://github.com/kittipatkampa/stemdeck/stargazers"><img src="https://img.shields.io/github/stars/kittipatkampa/stemdeck?style=flat-square" alt="GitHub Stars"></a>
+  <a href="https://github.com/kittipatkampa/stemdeck/releases"><img src="https://img.shields.io/github/downloads/kittipatkampa/stemdeck/total?style=flat-square&color=52c65f" alt="Total Downloads"></a>
+  <a href="https://github.com/kittipatkampa/stemdeck/releases/latest"><img src="https://img.shields.io/github/v/release/kittipatkampa/stemdeck?style=flat-square" alt="Latest Release"></a>
+  <a href="https://github.com/kittipatkampa/stemdeck/blob/main/LICENSE"><img src="https://img.shields.io/github/license/kittipatkampa/stemdeck?style=flat-square" alt="License"></a>
 </div>
 
 <br>
