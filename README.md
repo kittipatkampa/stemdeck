@@ -78,6 +78,8 @@ StemDeck is free and **does not accept any money, sponsorship, or funding**  fro
 
 **YouTube and local file import.** Paste a YouTube URL or drop an MP3, WAV, FLAC, OGG/Opus, MP4, or M4A directly onto the import bar.
 
+**Synced video playback.** Watch the preserved video from a YouTube or MP4 import while playing your stem mix, with a collapsible, resizable video pane and fullscreen view. See [Using synced video playback](#using-synced-video-playback).
+
 **DAW-style waveform editor** with min/max sample rendering across all stems, shared normalization, zoom in/out/Fit, loop drag on the ruler, gold playhead overlay, and stem-aligned lanes.
 
 **Stem subset extraction.** Click stem chips to choose which stems to keep. Clicking from "all selected" snaps to "only this one"; subsequent clicks add or remove.
@@ -95,6 +97,17 @@ StemDeck is free and **does not accept any money, sponsorship, or funding**  fro
 **Cancellable jobs.** Cancel mid-pipeline and the runner terminates the active subprocess immediately, deletes the partial job dir, and returns to ready.
 
 **Library panel** with folder-based track organisation, drag-and-drop, search, and trash.
+
+### Using synced video playback
+
+1. Import a YouTube URL or an MP4 file containing video and wait for processing to finish.
+2. Open the track in the studio. When a video track is available, the **Video** pane appears automatically.
+3. Use the mixer's play, pause, and seek controls. The picture follows the stem playback; the video's own audio stays muted, so the stem mixer controls what you hear. Mute the vocals stem for karaoke practice.
+4. Click **Video** to show or hide the pane, drag its bottom edge to resize it, or click **Fullscreen video** to expand it.
+
+Audio-only tracks have no video pane. Video playback requires a preserved video track; an older import without one must be imported again. If a YouTube video cannot be fetched, the audio can still be used.
+
+This feature uses the existing dependencies. No additional installation step is needed.
 
 ---
 
@@ -126,7 +139,7 @@ If you need speed, quality, mobile access, or the extra musician tooling, the co
 
 ## Download
 
-Pre-built installers and zips are attached to each [GitHub Release](https://github.com/stemdeckapp/stemdeck/releases).
+Pre-built installers and zips are attached to each [upstream GitHub Release](https://github.com/stemdeckapp/stemdeck/releases). These are builds of `stemdeckapp/stemdeck`, not this `kittipatkampa/stemdeck` fork. To run this fork's synced video playback changes, follow [Build from Source](#build-from-source); the web server is the simplest way to run them locally.
 
 **macOS**
 
@@ -167,6 +180,15 @@ StemDeck is built on **[Python 3.12](https://python.org)** managed via **[uv](ht
 ---
 
 ## Build from Source
+
+Use this fork's source for the instructions below. If you have not cloned it yet:
+
+```sh
+git clone https://github.com/kittipatkampa/stemdeck.git stemdeck
+cd stemdeck
+```
+
+If you already have this fork checked out with the merged video playback changes, no reinstall is needed. Restart the web server with `./run.sh restart` and refresh the browser to load the updated app.
 
 ### macOS Native App
 
@@ -215,7 +237,6 @@ Python 3.12 or newer, `ffmpeg` on your PATH, and [uv](https://github.com/astral-
 #### macOS / Linux (one-shot)
 
 ```sh
-git clone https://github.com/stemdeckapp/stemdeck stemdeck && cd stemdeck
 ./run.sh setup     # installs ffmpeg + uv, runs uv sync
 ./run.sh start
 ```
@@ -231,7 +252,6 @@ Install prerequisites:
 - [ffmpeg](https://ffmpeg.org/download.html) — `winget install Gyan.FFmpeg` (or Chocolatey: `choco install ffmpeg`)
 
 ```powershell
-git clone https://github.com/stemdeckapp/stemdeck stemdeck; cd stemdeck
 uv sync
 uv run uvicorn app.main:app --host 127.0.0.1 --port 8000 --timeout-graceful-shutdown 5
 ```
@@ -253,7 +273,6 @@ uv run uvicorn app.main:app --host 127.0.0.1 --port 8000 --timeout-graceful-shut
 #### Manual (any platform)
 
 ```sh
-git clone https://github.com/stemdeckapp/stemdeck stemdeck && cd stemdeck
 uv sync
 uv run uvicorn app.main:app --reload --timeout-graceful-shutdown 5
 ```
