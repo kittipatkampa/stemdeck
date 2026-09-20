@@ -168,8 +168,11 @@ try:
         proc.send_signal(signal.CTRL_BREAK_EVENT)
         proc.wait(timeout=30)
         # Uvicorn re-raises the console signal after its graceful shutdown.
-        # Windows may therefore report STATUS_CONTROL_C_EXIT rather than zero.
-        assert proc.returncode in (0, 0xC000013A, -1073741510), proc.returncode
+        # The Windows CRT default signal handler returns 3; the console handler
+        # can instead return STATUS_CONTROL_C_EXIT. Neither alone proves cleanup:
+        # require the shutdown log and no surviving workers below as well.
+        # https://learn.microsoft.com/en-us/cpp/c-runtime-library/reference/signal
+        assert proc.returncode in (0, 3, 0xC000013A, -1073741510), proc.returncode
         for _ in range(15):
             if not any(child.is_running() for child in children):
                 break
@@ -179,7 +182,12 @@ try:
             encoding="utf-8", errors="replace"
         ), "backend did not complete graceful shutdown"
         checks.append("graceful shutdown without surviving child processes")
-    result = {"automated": "passed", "checks": checks, "desktopAcceptance": "pending"}
+    result = {
+        "automated": "passed",
+        "checks": checks,
+        "shutdownExitCode": proc.returncode,
+        "desktopAcceptance": "pending",
+    }
 except BaseException as exc:
     result = {
         "automated": "failed",
