@@ -42,6 +42,7 @@ data = root / "data"
 env = {
     **os.environ,
     "PYTHONNOUSERSITE": "1",
+    "PYTHONHOME": str(root / "python/base"),
     "STEMDECK_DATA_DIR": str(data),
     "STEMDECK_JOBS_DIR": str(data / "jobs"),
     "STEMDECK_DEMUCS_DEVICE": "cpu",

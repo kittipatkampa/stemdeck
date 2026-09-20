@@ -2617,7 +2617,7 @@ async function openReleaseDialog() {
     download.classList.remove("hidden");
 
     let usedInapp = false;
-    if (updaterAssetNames(target)) {
+    if (window.__TAURI__?.core?.invoke && updaterAssetNames(target)) {
       try {
         usedInapp = await wireInAppUpdate(target);
       } catch (e) {

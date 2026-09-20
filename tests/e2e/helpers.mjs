@@ -141,6 +141,8 @@ export async function stubTauri(page) {
             case "store_set":
               window.localStorage.setItem(args?.key, JSON.stringify(args?.value));
               return Promise.resolve(null);
+            case "build_target":
+              return Promise.resolve({ os: "windows", arch: "x64", gpu: "cpu" });
             case "get_setup_status":
               return Promise.resolve({ ready: true, data_dir: "/tmp/e2e", ffmpeg: "/usr/bin/ffmpeg" });
             default:

@@ -43,7 +43,8 @@ jobs:
     # Runner must be darwin/arm64 with Xcode CLT and rustup (same requirements
     # as macos-release.yml, which this intentionally does not replace -- this
     # only builds/checks, never signs, packages, or uploads anything).
-    runs-on: [self-hosted, macOS, ARM64]
+    # This fork has no self-hosted runners; use an ephemeral hosted runner.
+    runs-on: ${{ github.repository == 'kittipatkampa/stemdeck' && 'macos-14' || fromJSON('["self-hosted", "macOS", "ARM64"]') }}
     timeout-minutes: 30
     defaults:
       run:

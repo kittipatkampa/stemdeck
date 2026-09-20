@@ -39,7 +39,8 @@ jobs:
     # Runner must have rustup and the MSVC toolchain (same requirements as
     # windows-release.yml, which this intentionally does not replace -- this
     # only builds/checks, never packages or uploads anything).
-    runs-on: [self-hosted, windows, x64]
+    # This fork has no self-hosted runners; use an ephemeral hosted runner.
+    runs-on: ${{ github.repository == 'kittipatkampa/stemdeck' && 'windows-2022' || fromJSON('["self-hosted", "windows", "x64"]') }}
     timeout-minutes: 30
     defaults:
       run:
