@@ -1,6 +1,7 @@
 """Exercise a relocated, extracted ZIP. Run with CI Python, never install into the ZIP."""
 
 import argparse
+import ctypes
 import json
 import os
 import signal
@@ -82,6 +83,13 @@ subprocess.run(
 def request(path, **kwargs):
     return urllib.request.urlopen(urllib.request.Request(base + path, **kwargs), timeout=20)
 
+
+# Hosted runners may launch Python without a console. CTRL_BREAK_EVENT
+# requires the sender and the new process group to share one.
+if os.name == "nt":
+    kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+    if not kernel32.GetConsoleCP() and not kernel32.AllocConsole():
+        raise ctypes.WinError(ctypes.get_last_error())
 
 checks = []
 children = []
