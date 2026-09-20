@@ -209,8 +209,8 @@ export async function stubUpdateCheck(page, { available = false } = {}) {
         // it must be skipped, because a release is only offered once it has
         // been promoted to the latest release.
         body: JSON.stringify([
-          { tag_name: "v9.9.10", draft: false, prerelease: true, body: "unpromoted", html_url: "https://example.invalid", assets: [] },
-          { tag_name: "v9.9.9", draft: false, prerelease: false, body: "notes", html_url: "https://example.invalid", assets: [] },
+          { tag_name: "v9.9.10", draft: false, prerelease: true, body: "unpromoted", html_url: "https://github.com/kittipatkampa/stemdeck/releases/tag/v9.9.9", assets: [] },
+          { tag_name: "v9.9.9", draft: false, prerelease: false, body: "notes", html_url: "https://github.com/kittipatkampa/stemdeck/releases/tag/v9.9.9", assets: [] },
         ]),
       }));
     return;

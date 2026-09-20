@@ -1,3 +1,4 @@
+import { REPO_URL, RELEASES_URL, fetchStableRelease } from "./releaseSource.js";
 // catalog.js — library panel: folders, tracks, collapse, drag-and-drop
 import { STEM_NAMES } from "./constants.js";
 import { wireUpAudio, updateFooterTrack } from "./player.js";
@@ -2227,16 +2228,6 @@ function wireWidgets() {
 
 const FALLBACK_VERSION = "0.1.0";
 let currentVersion = FALLBACK_VERSION;
-const REPO_URL = "https://github.com/stemdeckapp/stemdeck";
-const RELEASES_URL = "https://github.com/stemdeckapp/stemdeck/releases";
-// The releases LIST, not /releases/latest. GitHub defines "latest" as the most
-// recent NON-PRERELEASE release, so the moment a version ships with the
-// pre-release box ticked it becomes invisible here and nobody is ever told an
-// update exists. StemDeck has historically published even its alphas as normal
-// releases, which is why that has not bitten yet -- this makes the check
-// correct either way rather than dependent on remembering not to tick a box.
-const RELEASES_API =
-  "https://api.github.com/repos/stemdeckapp/stemdeck/releases?per_page=10";
 const DISMISSED_UPDATE_KEY = "stemdeck.dismissed_update";
 
 // The full GitHub release object from the last successful update check, used to
@@ -2596,7 +2587,6 @@ async function openReleaseDialog() {
   const notes = document.getElementById("releaseNotes");
   const download = document.getElementById("releaseDownload");
   const docker = document.getElementById("releaseDocker");
-  const dockerCmd = document.getElementById("releaseDockerCmd");
 
   if (version) version.textContent = `v${normalizeVersion(latestRelease.tag_name)}`;
   if (notes) {
@@ -2606,16 +2596,8 @@ async function openReleaseDialog() {
       : `<p>No release notes provided. See the full release on GitHub.</p>`;
   }
 
-  // Server/Docker mode has no Tauri: updating is an image pull, not a file
-  // download, and the client browser's OS/arch is irrelevant to the container.
-  // Show the docker pull command instead of a (meaningless) desktop download.
-  const serverMode = !window.__TAURI__?.core?.invoke;
-  if (serverMode) {
-    const tag = normalizeVersion(latestRelease.tag_name);
-    if (dockerCmd) dockerCmd.textContent = `docker pull ghcr.io/stemdeckapp/stemdeck:${tag}`;
-    docker?.classList.remove("hidden");
-    download?.classList.add("hidden");
-  } else if (download) {
+  // This fork publishes portable previews, not Docker images.
+  if (download) {
     docker?.classList.add("hidden");
     const target = await getBuildTarget();
 
@@ -2668,26 +2650,8 @@ function wireReleaseDialog() {
 
 async function checkForUpdate() {
   try {
-    const res = await fetch(RELEASES_API, { headers: { Accept: "application/vnd.github+json" } });
-    if (!res.ok) return;
-    // The check itself succeeded, regardless of what it finds below — clear
-    // any stale "update check failed" card (#401).
+    const data = await fetchStableRelease();
     dismissFailuresByKind("update");
-    // Newest first, as GitHub returns them. Drafts are invisible to an
-    // unauthenticated request anyway, but filter them so a maintainer running a
-    // dev build is not offered a release that has no assets yet.
-    //
-    // Pre-releases are skipped as well: a release is published as a pre-release
-    // first, verified, and only then promoted ("Set as the latest release"), so
-    // nobody is offered a build that has not been through that. The list
-    // endpoint is used rather than /releases/latest because it keeps the choice
-    // here, in code, rather than in GitHub's endpoint semantics. It assumes a
-    // stable release inside the last 10 -- true unless ten consecutive
-    // pre-releases go out without one being promoted.
-    const releases = await res.json();
-    const data = Array.isArray(releases)
-      ? releases.find((r) => !r.draft && !r.prerelease)
-      : null;
     if (!data) return;
     const latest = normalizeVersion(data.tag_name);
     // Compare canonically so a PEP440 current version (0.7.0a9) matches the
