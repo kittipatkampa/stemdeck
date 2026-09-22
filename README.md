@@ -5,11 +5,11 @@
 **Free, local stem separation. No account. No upload. No subscription.**
 
 <div align="center">
-  <a href="https://github.com/stemdeckapp/stemdeck/actions/workflows/ci.yml"><img src="https://github.com/stemdeckapp/stemdeck/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
-  <a href="https://github.com/stemdeckapp/stemdeck/stargazers"><img src="https://img.shields.io/github/stars/stemdeckapp/stemdeck?style=flat-square" alt="GitHub Stars"></a>
-  <a href="https://github.com/stemdeckapp/stemdeck/releases"><img src="https://img.shields.io/github/downloads/stemdeckapp/stemdeck/total?style=flat-square&color=52c65f" alt="Total Downloads"></a>
-  <a href="https://github.com/stemdeckapp/stemdeck/releases/latest"><img src="https://img.shields.io/github/v/release/stemdeckapp/stemdeck?style=flat-square" alt="Latest Release"></a>
-  <a href="https://github.com/stemdeckapp/stemdeck/blob/main/LICENSE"><img src="https://img.shields.io/github/license/stemdeckapp/stemdeck?style=flat-square" alt="License"></a>
+  <a href="https://github.com/kittipatkampa/stemdeck/actions/workflows/ci.yml"><img src="https://github.com/kittipatkampa/stemdeck/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
+  <a href="https://github.com/kittipatkampa/stemdeck/stargazers"><img src="https://img.shields.io/github/stars/kittipatkampa/stemdeck?style=flat-square" alt="GitHub Stars"></a>
+  <a href="https://github.com/kittipatkampa/stemdeck/releases"><img src="https://img.shields.io/github/downloads/kittipatkampa/stemdeck/total?style=flat-square&color=52c65f" alt="Total Downloads"></a>
+  <a href="https://github.com/kittipatkampa/stemdeck/releases/latest"><img src="https://img.shields.io/github/v/release/kittipatkampa/stemdeck?style=flat-square" alt="Latest Release"></a>
+  <a href="https://github.com/kittipatkampa/stemdeck/blob/main/LICENSE"><img src="https://img.shields.io/github/license/kittipatkampa/stemdeck?style=flat-square" alt="License"></a>
 </div>
 
 <br>
@@ -139,7 +139,7 @@ If you need speed, quality, mobile access, or the extra musician tooling, the co
 
 ## Download
 
-Pre-built installers and zips are attached to each [upstream GitHub Release](https://github.com/stemdeckapp/stemdeck/releases). These are builds of `stemdeckapp/stemdeck`, not this `kittipatkampa/stemdeck` fork. To run this fork's synced video playback changes, follow [Build from Source](#build-from-source); the web server is the simplest way to run them locally.
+Pre-built installers and zips are attached to each [upstream GitHub Release](https://github.com/stemdeckapp/stemdeck/releases). These are builds of `stemdeckapp/stemdeck`, not this `kittipatkampa/stemdeck` fork. For this fork's Windows portable preview, see the Windows section below. To run the fork on other platforms or from source, follow [Build from Source](#build-from-source).
 
 **macOS**
 
@@ -152,14 +152,21 @@ Open the DMG, drag StemDeck to Applications, and launch it. On first launch the 
 
 macOS may show a Gatekeeper prompt on first open — right-click the app and choose Open to bypass it.
 
-**Windows**
+**Windows: this fork's CPU portable preview**
 
-| Zip | GPU | Approx. size |
-|---|---|---|
-| `StemDeck-Windows-x64.zip` | CPU only | ~700 MB |
-| `StemDeck-Windows-x64.NVIDIA.zip` | NVIDIA CUDA | ~1.6 GB |
+Preview ZIPs are built by the [Windows portable preview workflow](https://github.com/kittipatkampa/stemdeck/actions/workflows/windows-preview.yml). Successful runs provide a `windows-cpu-preview-<commit>` artifact for 30 days (GitHub sign-in required). Download and extract the artifact, then extract the `StemDeck-Windows-x64.zip` inside it. Draft releases are visible only to repository collaborators; they are not public downloads. Published builds, when available, will appear on [this fork's Releases page](https://github.com/kittipatkampa/stemdeck/releases).
 
-Extract the zip anywhere, run `StemDeck.exe`. FFmpeg, the Demucs model, config, and logs live in a `data/` folder next to `StemDeck.exe`, not in AppData; move or copy the whole extracted folder anywhere and it keeps working. On first launch the app verifies the bundled Python runtime and downloads FFmpeg and the Demucs model (~170 MB) into that folder. Subsequent launches skip this and start in seconds. Everything is self-contained; no Python or system dependencies required. Your job/library data stays in its usual location (`~/Documents/StemDeck` by default) and is relocatable anytime from Settings → StemData location.
+1. On **Windows 10/11 x64**, extract the entire ZIP into a writable folder under your user profile. Do not run the executable from inside the ZIP or use `Program Files`.
+2. Double-click **StemDeck.exe**. No Git, Python installation, PowerShell commands, or NVIDIA GPU is needed.
+3. Allow first-run FFmpeg and model downloads to finish, then import your media. This preview uses CPU separation, which can take several minutes.
+
+For later launches, double-click the same executable. Close the app window to stop it. The preview is unsigned and Windows may show reputation warnings; do not disable security protection.
+
+Keep the entire extracted folder together when moving it. Settings, models, logs, and a fresh portable library live under `data/` (`data/jobs` for tracks). An existing `Documents/StemDeck/jobs` library or a location selected in Settings may remain elsewhere. Check **Settings → StemData location** and back up both the portable folder and any external library. **Do not delete `data/` to troubleshoot—it may contain your tracks.**
+
+If setup fails, check internet access, free disk space, and write permission, then retry. Logs are under `data/logs/`. See the included `README-WINDOWS.txt` and [desktop acceptance checklist](packaging/windows/PREVIEW-TESTING.md). A passing automated build is not desktop acceptance; previews remain drafts until separately tested and approved for publication.
+
+The [upstream Windows ZIPs](https://github.com/stemdeckapp/stemdeck/releases) are separate builds and do not represent this fork. Source installation remains available under [Windows (PowerShell)](#windows-powershell).
 
 ---
 

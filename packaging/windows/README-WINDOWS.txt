@@ -1,31 +1,40 @@
-StemDeck Windows Portable Alpha
-===============================
+StemDeck fork - Windows CPU Portable Preview
+===========================================
 
-Run
----
+For Windows 10/11 x64. This preview includes synced video playback from the
+kittipatkampa/stemdeck fork. No Git, Python installation, PowerShell commands,
+or NVIDIA GPU is required. CPU separation can take several minutes.
 
-1. Extract the zip folder.
-2. Double-click StemDeck.exe.
-3. Let first-run setup prepare local runtime assets.
+First launch
+------------
+1. Extract the ENTIRE ZIP to a writable folder under your user profile.
+   Do not run StemDeck.exe from inside the ZIP or extract into Program Files.
+2. Double-click StemDeck.exe in the extracted folder.
+3. Keep internet access available for first-run FFmpeg and model downloads.
+4. Import a local MP4 or a supported URL and wait for separation. Use the
+   mixer controls to play the stems with the video.
 
-Notes
------
+Later launches: double-click StemDeck.exe again. Close the app window to stop.
+Move the entire folder together; keep python/, backend/, data/, portable.txt,
+and cpu-only beside the executable. This is a portable app, not an installer;
+it creates no Start menu shortcut. The preview is unsigned, so Windows may
+show reputation warnings. Do not disable Windows security protections.
 
-- This is a portable folder, not an installer.
-- No Start Menu shortcut, service, or registry integration is created.
-- Runtime, config, and logs stay under data/, next to StemDeck.exe, not in AppData.
-- FFmpeg is downloaded during first-run setup into data/ffmpeg/.
-- Demucs model weights are downloaded by the backend on first use into data/models/.
-- Your job history and library are stored separately (Documents/StemDeck by default,
-  same as before), not inside this folder -- relocate them anytime from
-  Settings -> StemData location if you'd rather keep them elsewhere.
-- The empty portable.txt file next to StemDeck.exe is what tells the app to use
-  this data/ folder instead of AppData -- don't delete it.
+Your files
+----------
+Runtime downloads, settings, models and logs are stored under data/.
+A fresh portable installation stores its library under data/jobs. An existing
+Documents/StemDeck/jobs library or a location chosen in Settings may remain
+there. Check Settings -> StemData location before moving or backing up tracks.
+Do not delete data/ as a troubleshooting step: it can contain your library.
+Back up the whole portable folder and any configured external library.
 
 Troubleshooting
 ---------------
-
-- If setup fails, check internet access and retry.
-- If a job fails, inspect data/logs/ when logs are added.
-- Deleting data/ forces first-run setup to recreate runtime state (ffmpeg and the
-  Demucs model re-download; your job history and library are unaffected).
+If setup fails, check internet access, free disk space, and write permission
+for the extracted folder, then retry. Logs are in data/logs/.
+If the app fails after being moved, verify that the whole folder was moved.
+This preview uses CPU only; do not install CUDA packages into its Python folder.
+Preview updates use a new full ZIP. Keep the old folder and library backed up;
+do not replace data/ with the empty folder from a fresh download.
+Fork downloads: https://github.com/kittipatkampa/stemdeck/releases

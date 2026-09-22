@@ -1,0 +1,107 @@
+name: Windows portable preview
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Preview version (SemVer, e.g. 0.17.3-alpha.1)
+        required: true
+        default: 0.17.3-alpha.1
+  # Bootstrap only: a new workflow cannot be dispatched before it is on main.
+  push:
+    branches: [codex/windows-portable-preview]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: windows-preview-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  PREVIEW_VERSION: ${{ inputs.version || '0.17.3-alpha.1' }}
+
+jobs:
+  preview:
+    runs-on: windows-2022
+    timeout-minutes: 90
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          architecture: x64
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Prepare tools and version
+        run: |
+          $PSNativeCommandUseErrorActionPreference = $true
+          python -m pip install packaging psutil
+          rustup toolchain install stable --profile minimal
+          rustup default stable
+          rustup target add x86_64-pc-windows-msvc
+          choco install ffmpeg --yes --no-progress
+          "$env:ChocolateyInstall\bin" | Out-File -FilePath $env:GITHUB_PATH -Append
+          python scripts/windows/prepare-preview.py $env:PREVIEW_VERSION
+      - name: JavaScript regression checks
+        run: |
+          $PSNativeCommandUseErrorActionPreference = $true
+          node tests/js/video-sync.test.mjs
+          node tests/js/release-source.test.mjs
+      - name: Build CPU portable ZIP
+        run: |
+          $PSNativeCommandUseErrorActionPreference = $true
+          New-Item -ItemType Directory -Force preview-logs | Out-Null
+          Start-Transcript -Path preview-logs/build.log
+          try {
+            ./scripts/windows/make-portable.ps1 -CpuOnly -PackageVersion $env:PREVIEW_VERSION
+          } finally {
+            Stop-Transcript
+          }
+      - name: Verify and extract ZIP
+        run: |
+          $zip = 'dist/StemDeck-Windows-x64.zip'
+          $expected = ((Get-Content "$zip.sha256").Trim() -split '\s+')[0]
+          if ((Get-FileHash $zip -Algorithm SHA256).Hash -ne $expected) { throw 'ZIP checksum mismatch' }
+          $root = Join-Path $env:RUNNER_TEMP 'StemDeck relocated preview'
+          Expand-Archive $zip -DestinationPath $root
+          "STEMDECK_PORTABLE_TEST_ROOT=$root" | Out-File -FilePath $env:GITHUB_ENV -Append
+      - name: Windows Rust and extracted runtime checks
+        working-directory: desktop/src-tauri
+        run: |
+          $PSNativeCommandUseErrorActionPreference = $true
+          cargo test --bin stemdeck
+          cargo test --bin stemdeck packaged_runtime_relocation -- --ignored --nocapture
+      - name: Packaged backend and media smoke test
+        run: |
+          $PSNativeCommandUseErrorActionPreference = $true
+          python scripts/windows/smoke-portable.py "$env:STEMDECK_PORTABLE_TEST_ROOT" $env:PREVIEW_VERSION --logs preview-logs
+          Copy-Item preview-logs/validation.json dist/validation.json
+          Copy-Item packaging/windows/PREVIEW-TESTING.md dist/PREVIEW-TESTING.md
+      - name: Upload verified preview
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-cpu-preview-${{ github.sha }}
+          retention-days: 30
+          compression-level: 0
+          if-no-files-found: error
+          path: |
+            dist/StemDeck-Windows-x64.zip
+            dist/StemDeck-Windows-x64.zip.sha256
+            dist/build-metadata.json
+            dist/validation.json
+            dist/PREVIEW-TESTING.md
+      - name: Preserve diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-preview-diagnostics-${{ github.sha }}
+          retention-days: 30
+          if-no-files-found: ignore
+          path: |
+            preview-logs/
+            ${{ runner.temp }}/StemDeck relocated preview/data/logs/

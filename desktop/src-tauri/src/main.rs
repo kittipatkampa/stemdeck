@@ -2514,7 +2514,7 @@ fn classify_cuda_install_error(stderr: &str) -> String {
 const CPU_TORCH_VERSION: &str = "2.6.0";
 /// Matches CPU_TORCH_VERSION and the version uv.lock resolves. Move the two
 /// together or the ops registration breaks; see torchvision_version_for_tag.
-#[cfg(not(target_os = "macos"))]
+#[cfg(any(not(target_os = "macos"), test))]
 const CPU_TORCHVISION_VERSION: &str = "0.21.0";
 
 /// What a line of pip's output means, for the setup screen.
@@ -5324,6 +5324,34 @@ mod tests {
     use std::process::{Child, Command, Stdio};
     use std::time::Duration;
     use tempfile::TempDir;
+
+    // Exercise the startup relocation repair against an extracted ZIP.
+    #[cfg(windows)]
+    #[test]
+    #[ignore = "requires STEMDECK_PORTABLE_TEST_ROOT pointing to an extracted ZIP"]
+    fn packaged_runtime_relocation() {
+        let root = PathBuf::from(std::env::var("STEMDECK_PORTABLE_TEST_ROOT").unwrap());
+        assert!(root.to_string_lossy().contains(' '));
+        let python = super::python_path(&root).expect("bundled Python missing");
+        fs::write(
+            root.join("python/pyvenv.cfg"),
+            "home = Z:/missing-build-host/Python\nexecutable = Z:/missing-build-host/python.exe\ninclude-system-site-packages = false\n",
+        )
+        .unwrap();
+        super::patch_pyvenv_cfg(&python);
+        let output = Command::new(&python)
+            .env("PYTHONHOME", root.join("python/base"))
+            .env("PYTHONNOUSERSITE", "1")
+            .args(["-c",
+                "import sys, torch, torchaudio, fastapi, uvicorn, yt_dlp, demucs, librosa, soundfile, pyloudnorm, audio_separator, onnxruntime; assert sys.version_info[:2] == (3, 12); assert torch.version.cuda is None; assert not torch.cuda.is_available()"])
+            .output()
+            .expect("bundled Python failed to start");
+        assert!(
+            output.status.success(),
+            "{}",
+            String::from_utf8_lossy(&output.stderr)
+        );
+    }
 
     fn make_tmp() -> TempDir {
         tempfile::tempdir().expect("failed to create temp dir")

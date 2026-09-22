@@ -4,7 +4,7 @@ import { openStudio, JOB_ID } from "./helpers.mjs";
 test.describe("karaoke video pane", () => {
   test("video pane and controls appear for a track with video", async ({ page }) => {
     await openStudio(page, { tauri: true });
-    await page.locator(`.cat-item[data-id="${JOB_ID}"]`).click();
+    await page.locator(`.cat-item[data-id="${JOB_ID}"]`).first().click();
 
     const pane = page.locator("#dawVideoPane");
     await expect(pane).toBeVisible({ timeout: 15000 });
@@ -16,7 +16,7 @@ test.describe("karaoke video pane", () => {
 
   test("video panel toggle collapses the pane", async ({ page }) => {
     await openStudio(page, { tauri: true });
-    await page.locator(`.cat-item[data-id="${JOB_ID}"]`).click();
+    await page.locator(`.cat-item[data-id="${JOB_ID}"]`).first().click();
     await expect(page.locator("#dawVideoPane")).toBeVisible({ timeout: 15000 });
 
     await page.locator("#panelVideoToggle").click();
@@ -28,7 +28,7 @@ test.describe("karaoke video pane", () => {
 
   test("audio-only sibling has no video pane", async ({ page }) => {
     await openStudio(page, { tauri: true });
-    await page.locator('.cat-item[data-id="e2e0cafebabe"]').click();
+    await page.locator('.cat-item[data-id="e2e0cafebabe"]').first().click();
     await expect(page.locator("#dawVideoPane")).toBeHidden({ timeout: 15000 });
     await expect(page.locator("#panelVideoToggle")).toBeHidden();
   });

@@ -92,6 +92,7 @@ function Get-PackageVersion {
 
 function Bundle-PythonRuntime([string]$VenvDir, [string]$VenvPython) {
   $baseExecutable = (& $VenvPython -c "import sys; print(getattr(sys, '_base_executable', sys.executable))").Trim()
+  Assert-LastExitCode "packaging command"
   if (-not (Test-Path $baseExecutable)) {
     throw "Could not locate base Python executable: $baseExecutable"
   }
@@ -128,6 +129,7 @@ function Invoke-TauriBuild {
     throw "Tauri CLI not found at $TauriCli. npm install/ci may have omitted devDependencies."
   }
   & node $TauriCli build
+  Assert-LastExitCode "building the Tauri executable"
 }
 
 function Assert-Fresh-TauriBuild {
@@ -280,9 +282,11 @@ if ($CpuOnly) {
 # caught #407 (librosa 1.0.0 dropping audioread, which audio-separator still
 # needs) before release instead of after.
 & $PythonExe -c "import fastapi, uvicorn, yt_dlp, demucs, torch, torchaudio, librosa, pyloudnorm, soundfile, audio_separator, onnxruntime"
+Assert-LastExitCode "packaging command"
 
 Bundle-PythonRuntime $PythonDir $PythonExe
 & $PythonExe -c "import sys, fastapi, uvicorn; print('Portable Python:', sys.executable)"
+Assert-LastExitCode "packaging command"
 
 Write-Host "Stripping venv of build-time and dead-weight artifacts..."
 Get-ChildItem -Path $PythonDir -Filter "__pycache__" -Recurse -Directory -Force |
@@ -335,6 +339,7 @@ Assert-LastExitCode "pruning yt-dlp extractors"
 # removed something load-bearing. Same rationale as that check: catch it here
 # rather than in a release (#407).
 & $PythonExe -c "import fastapi, uvicorn, yt_dlp, demucs, torch, torchaudio, librosa, pyloudnorm, soundfile, audio_separator, onnxruntime; print('Post-strip import check OK')"
+Assert-LastExitCode "packaging command"
 
 # Full license texts for everything in the venv, generated from the venv rather
 # than maintained by hand. MIT, BSD and Apache-2.0 all require the copyright
@@ -363,6 +368,7 @@ Assert-LastExitCode "collecting dependency licenses"
 # and NVIDIA variants by torch's local version tag alone (2.6.0+cpu vs 2.6.0)
 # even though their dependency requirements are identical.
 $PyMajorMinor = (& $PythonExe -c "import sys; print('%d.%d' % sys.version_info[:2])").Trim()
+Assert-LastExitCode "packaging command"
 # Hash the CONTENT with newlines normalised, not the bytes on disk. A Windows
 # checkout with core.autocrlf=true stores uv.lock as CRLF and Linux as LF, so
 # hashing raw bytes produced a different id per platform for an identical
@@ -392,13 +398,18 @@ Push-Location $DesktopDir
 try {
   if (Test-Path "package-lock.json") {
     npm ci --include=dev
+    Assert-LastExitCode "packaging command"
   } else {
     npm install --include=dev
+    Assert-LastExitCode "packaging command"
   }
 
   if (-not $SkipTauriBuild) {
     $env:CI = "true"  # Woodpecker sets CI=woodpecker; Tauri only accepts true/false
     rustup default stable
+    Assert-LastExitCode "packaging command"
+    # Never reuse an executable left over from a previous build.
+    if (Test-Path $TargetExe) { Remove-Item -Force $TargetExe }
     Invoke-TauriBuild
   } else {
     Assert-Fresh-TauriBuild
