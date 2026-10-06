@@ -6,7 +6,9 @@ Recorded during initial implementation (Oct 2026).
 
 - **Test URL:** `https://youtube.com/shorts/senFAeo0RQM`
 - **Result:** Failed on Modal datacenter IP with YouTube bot check (`Sign in to confirm you're not a bot`).
-- **Mitigation:** Provide `youtube-cookies` Modal secret with `YTDLP_COOKIES_B64`, or use `PIPELINE=local` for development on a residential IP.
+- **Working route:** `PIPELINE=local` or the locally hosted hybrid mode downloads on this Mac before sending extracted tracks to Modal.
+
+The dedicated cookies were installed on 2026-10-06. They work from this Mac, but new production Modal jobs still fail at metadata lookup with “The page needs to be reloaded.” Pinning yt-dlp to the locally working `2026.8.19` release and trying the documented `web_embedded` player client did not resolve the Modal failure. No production T4 stage timings are available yet because these jobs never reached extraction.
 
 ## Stage weights (initial)
 

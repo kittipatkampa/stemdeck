@@ -137,7 +137,7 @@ webapp-karaoke/
 ### GCP
 
 - Project `karaoke-machine-kk-20261006` under `kittipat@gmail.com`, with billing linked, service accounts and three secrets in place.
-- Cloud Run API and frontend are deployed. Same-origin access unlock, existing job status, and a 206 MP4 range response passed. A fresh job through Cloud Run is pending a dedicated YouTube cookie file. See `deploy/README.md`.
+- Cloud Run API and frontend are deployed. Same-origin access unlock, existing dev job status, and a 206 MP4 range response passed. Fresh production jobs reach Modal but fail at YouTube metadata lookup even with the dedicated cookie file; see `deploy/README.md`.
 
 ---
 
@@ -171,7 +171,7 @@ Frontend: `cd webapp-karaoke/frontend && npm run dev` (or `make dev` for both).
 
 ### `PIPELINE=modal` + `MODAL_LOCAL_DOWNLOAD=0`
 
-Full download on Modal CPU (`run_job`). Requires **`youtube-cookies`** Modal secret (`YTDLP_COOKIES_B64`). Use for Cloud Run if API cannot download YouTube.
+Full download on Modal CPU (`run_job`). The production app has the **`youtube-cookies`** Modal secret (`YTDLP_COOKIES_B64`), but YouTube still rejects metadata requests from Modal. Cloud Run currently uses this mode, so new jobs fail at download until a working download route is chosen.
 
 ---
 
@@ -179,7 +179,8 @@ Full download on Modal CPU (`run_job`). Requires **`youtube-cookies`** Modal sec
 
 | Issue | Symptom | Fix |
 |--------|---------|-----|
-| yt-dlp on Modal IP | Bot check on metadata/download | Hybrid download on API host, or cookies secret |
+| yt-dlp on Modal IP | Bot check without cookies; “page needs to be reloaded” with dedicated cookies | Hybrid download on a host where YouTube permits it; a cloud route is still needed |
+| App/secret names only set at deploy | Container sees dev defaults and fails to hydrate dependencies | Bake `KARAOKE_MODAL_APP` and `MODAL_SECRETS` names into the images through `APP_ENV` |
 | `volume.commit()` from laptop | `commit() can only be called on a mounted volume inside a container` | Never commit from backend; only inside `@app.function` |
 | Stale volume across containers | `missing no_vocals.wav` after GPU step | `volume.reload()` after `separate_stems.remote()` and at GPU entry |
 | Local `Path` passed to `.remote()` | Container tries to open a Mac path | Upload both files with `Volume.batch_upload()`, then pass only `job_id` |
@@ -218,13 +219,14 @@ Modal token: `~/.modal.toml` / `modal profile` (user: `kittipatkampa`).
 
 The test output was a 16.89-second VP9/AAC MP4. The opt-in smoke test passed against the completed job. The default test suite does not submit a new Modal job.
 
-### P1 — Production GCP (staging deployed, new cloud job pending)
+### P1 — Production GCP (staging deployed, new cloud job blocked)
 
 - [x] Install `gcloud`; create project `karaoke-machine-kk-20261006` under `kittipat@gmail.com` with billing
 - [x] Run `deploy/setup-gcp.sh`, build both images, and deploy backend/frontend to Cloud Run
 - [x] Store Modal token pair and family access code in Secret Manager; verify same-origin proxy, access cookie, existing job status, and 206 MP4 range response
 - [x] Set Cloud Run to `MODAL_LOCAL_DOWNLOAD=0` to avoid background threads
-- [ ] Add a dedicated YouTube cookie file to Modal, deploy `karaoke-maker-prod`, and verify a **new** cloud job through the public URL
+- [x] Add the dedicated YouTube cookie file to Modal and deploy `karaoke-maker-prod`; Cloud Run points to it
+- [ ] Establish a download route that works from the public app, then verify a **new** job through download and browser playback. Cookie-backed Modal jobs `f472aa272f49`, `3578735a4611`, and `a71e1eec2052` failed during metadata lookup; the same file works locally. yt-dlp `2026.8.19` and the documented `web_embedded` client were tried without changing the cloud result.
 
 ### P2 — Hardening
 

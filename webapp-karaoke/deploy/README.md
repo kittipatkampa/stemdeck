@@ -14,7 +14,7 @@ export REGION=us-central1
 export KARAOKE_MODAL_APP=karaoke-maker-prod
 ```
 
-4. A dedicated Netscape-format YouTube cookie file. Create the Modal `youtube-cookies` secret with its contents in `YTDLP_COOKIES_B64`, then deploy with `KARAOKE_MODAL_APP=karaoke-maker-prod MODAL_SECRETS=youtube-cookies make deploy-modal`.
+4. The dedicated Netscape-format YouTube cookie file has been stored as Modal secret `youtube-cookies` (`YTDLP_COOKIES_B64`), and `karaoke-maker-prod` is deployed with it. Keep the source file and secret values out of Git.
 5. Secret Manager entries:
    - `modal-token-id`, `modal-token-secret` (from Modal settings)
    - `karaoke-access-code` (one shared family code; stored as a secure, HTTP-only cookie after entry)
@@ -38,7 +38,7 @@ Creates Artifact Registry, the two service accounts, and a GCS output bucket wit
 
 The script uses `MODAL_LOCAL_DOWNLOAD=0`, so all work happens in Modal and Cloud Run does not rely on a background thread. It sets the family access code from Secret Manager. The backend reads completed MP4s from the Modal Volume. Do not set `GCS_OUTPUT_BUCKET` on Cloud Run until Modal uploads to that bucket and signed URL generation has been verified.
 
-Cloud Run currently points to `karaoke-maker-dev` for a staging check against an existing completed job. Switch `KARAOKE_MODAL_APP` to `karaoke-maker-prod` only after deploying that Modal app with the YouTube cookies secret and verifying a new cloud job. To reuse a previously built image, set `SKIP_BUILD=1`.
+Cloud Run points to `karaoke-maker-prod` (API revision `karaoke-api-00003-lp7`). The production worker starts and records job failures correctly, but YouTube returns “The page needs to be reloaded” during metadata lookup from Modal. The same dedicated cookies work from this Mac. To reuse a previously built image, set `SKIP_BUILD=1`.
 
 Note the service URL (e.g. `https://karaoke-api-xxxxx-uc.a.run.app`).
 
@@ -49,7 +49,7 @@ export BACKEND_URL=https://karaoke-api-omadfssjbq-uc.a.run.app
 ./deploy/deploy-frontend.sh
 ```
 
-The current frontend is `https://karaoke-web-omadfssjbq-uc.a.run.app`. Its `/api` proxy, access cookie, existing job status, and MP4 range response were verified against Cloud Run on 2026-10-06. New cloud downloads remain unverified until the dedicated cookie file is added to Modal.
+The current frontend is `https://karaoke-web-omadfssjbq-uc.a.run.app`. Its `/api` proxy, access cookie, existing dev job status, and MP4 range response were verified against Cloud Run on 2026-10-06. Fresh production jobs were submitted through this URL and failed at YouTube metadata lookup on Modal, before extract/stem/combine.
 
 ## Hardening
 

@@ -851,7 +851,7 @@ requires-dist = [
     { name = "torch", marker = "extra == 'pipeline'", specifier = ">=2.6,<2.7" },
     { name = "torchaudio", marker = "extra == 'pipeline'", specifier = ">=2.6,<2.7" },
     { name = "uvicorn", extras = ["standard"], specifier = ">=0.30" },
-    { name = "yt-dlp", marker = "extra == 'pipeline'", specifier = ">=2026.7.4" },
+    { name = "yt-dlp", marker = "extra == 'pipeline'", specifier = "==2026.8.19" },
 ]
 provides-extras = ["pipeline"]
 

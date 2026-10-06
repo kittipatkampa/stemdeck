@@ -12,8 +12,10 @@ from pathlib import Path
 import modal
 
 APP_NAME = os.environ.get("KARAOKE_MODAL_APP", "karaoke-maker-dev")
+SECRET_NAMES = os.environ.get("MODAL_SECRETS", "")
 DICT_NAME = f"{APP_NAME}-jobs"
 VOLUME_NAME = f"{APP_NAME}-work"
+APP_ENV = {"KARAOKE_MODAL_APP": APP_NAME, "MODAL_SECRETS": SECRET_NAMES}
 
 app = modal.App(APP_NAME)
 volume = modal.Volume.from_name(VOLUME_NAME, create_if_missing=True)
@@ -23,8 +25,7 @@ DATA_ROOT = Path("/data/karaoke")
 
 
 def _modal_secrets() -> list[modal.Secret]:
-    names = os.environ.get("MODAL_SECRETS", "")
-    return [modal.Secret.from_name(n.strip()) for n in names.split(",") if n.strip()]
+    return [modal.Secret.from_name(n.strip()) for n in SECRET_NAMES.split(",") if n.strip()]
 
 
 _PIPELINE_DIR = Path(__file__).resolve().parent.parent / "pipeline"
@@ -39,7 +40,8 @@ def _preload_demucs_weights() -> None:
 cpu_image = (
     modal.Image.from_registry("debian:bookworm-slim", add_python="3.11")
     .apt_install("ffmpeg")
-    .pip_install("yt-dlp>=2026.7.4", "google-cloud-storage>=2.18")
+    .pip_install("yt-dlp==2026.8.19", "google-cloud-storage>=2.18")
+    .env(APP_ENV)
     .add_local_dir(_PIPELINE_DIR, remote_path="/root/pipeline", copy=True)
 )
 
@@ -52,6 +54,7 @@ gpu_image = (
         "soundfile>=0.12.1",
     )
     .run_function(_preload_demucs_weights, gpu="T4")
+    .env(APP_ENV)
     .add_local_dir(_PIPELINE_DIR, remote_path="/root/pipeline", copy=True)
 )
 
