@@ -6,12 +6,13 @@ import uuid
 from collections import defaultdict
 from typing import Any
 
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import Depends, FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, RedirectResponse, Response
 from pydantic import BaseModel, Field
 
 from app import job_state
+from app.access import access_code, is_authorized, require_access, unlock
 from app.runner import active_job_count, get_runner
 from app.settings import (
     PIPELINE_ROOT,
@@ -46,6 +47,10 @@ class CreateJobRequest(BaseModel):
     url: str = Field(..., min_length=1, max_length=2048)
 
 
+class AccessRequest(BaseModel):
+    code: str = Field(..., min_length=1, max_length=256)
+
+
 def _check_rate(ip: str) -> None:
     now = time.time()
     hits = [t for t in _rate[ip] if now - t < _RATE_WINDOW]
@@ -68,6 +73,7 @@ def _public_state(raw: dict[str, Any]) -> dict[str, Any]:
 
 
 @app.get("/healthz")
+@app.get("/api/healthz")
 def healthz() -> dict[str, str]:
     from app.settings import modal_local_download
 
@@ -78,7 +84,19 @@ def healthz() -> dict[str, str]:
     return payload
 
 
-@app.post("/api/jobs", status_code=202)
+@app.get("/api/access")
+def access_status(request: Request) -> dict[str, bool]:
+    return {"required": bool(access_code()), "authorized": is_authorized(request)}
+
+
+@app.post("/api/access")
+def enter_access_code(req: AccessRequest, request: Request, response: Response) -> dict[str, bool]:
+    _check_rate(request.client.host if request.client else "unknown")
+    unlock(req.code, response)
+    return {"authorized": True}
+
+
+@app.post("/api/jobs", status_code=202, dependencies=[Depends(require_access)])
 def create_job(req: CreateJobRequest, request: Request) -> dict[str, str]:
     _check_rate(request.client.host if request.client else "unknown")
     try:
@@ -97,7 +115,7 @@ def create_job(req: CreateJobRequest, request: Request) -> dict[str, str]:
     return {"job_id": job_id, "status": "queued"}
 
 
-@app.get("/api/jobs/{job_id}")
+@app.get("/api/jobs/{job_id}", dependencies=[Depends(require_access)])
 def get_job_status(job_id: str) -> dict[str, Any]:
     runner = get_runner()
     state = runner.get(job_id)
@@ -108,7 +126,11 @@ def get_job_status(job_id: str) -> dict[str, Any]:
     return _public_state(state)
 
 
-@app.get("/api/jobs/{job_id}/download", response_model=None)
+@app.get(
+    "/api/jobs/{job_id}/download",
+    response_model=None,
+    dependencies=[Depends(require_access)],
+)
 def download_job(job_id: str) -> Response:
     runner = get_runner()
     state = runner.get(job_id)

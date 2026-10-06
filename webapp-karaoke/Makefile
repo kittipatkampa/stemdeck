@@ -4,6 +4,7 @@ WEBAPP_ROOT := $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
 BACKEND := $(WEBAPP_ROOT)backend
 FRONTEND := $(WEBAPP_ROOT)frontend
 MODAL := $(WEBAPP_ROOT)modal
+KARAOKE_MODAL_APP ?= karaoke-maker-dev
 
 dev:
 	@echo "Starting backend (PIPELINE=local) and frontend..."
@@ -20,10 +21,9 @@ test:
 	cd $(BACKEND) && uv run --extra pipeline --group dev pytest -q
 
 deploy-modal:
-	cd $(MODAL) && KARAOKE_MODAL_APP=karaoke-maker-dev modal deploy modal_app.py
+	cd $(MODAL) && KARAOKE_MODAL_APP=$(KARAOKE_MODAL_APP) modal deploy modal_app.py
 
 # Example: MODAL_SECRETS=youtube-cookies make deploy-modal
 
 modal-smoke:
-	cd $(MODAL) && modal run modal_app.py::run_job --job-id smoke-$$(date +%s) \
-		--youtube-url "https://youtube.com/shorts/senFAeo0RQM"
+	cd $(BACKEND) && RUN_MODAL_SMOKE=1 uv run --extra pipeline --group dev pytest -q tests/test_modal_smoke.py

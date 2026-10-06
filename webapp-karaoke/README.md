@@ -37,20 +37,16 @@ Jobs and outputs are stored under `webapp-karaoke/.data/` (gitignored).
 | `KARAOKE_MODAL_APP` | `karaoke-maker-dev` | Modal app name |
 | `MAX_CONCURRENT_JOBS` | `2` | Per-backend instance |
 | `MAX_DURATION_SEC` | `600` | Max video length |
+| `ACCESS_CODE` | unset | When set, require a shared code before API jobs and downloads |
 
 ## Modal (serverless GPU)
 
-YouTube often blocks datacenter IPs. A Phase 0 spike on Modal failed with “Sign in to confirm you're not a bot”. For Modal downloads, provide cookies:
-
-```bash
-modal secret create youtube-cookies \
-  YTDLP_COOKIES_B64="$(base64 < /path/to/cookies.txt | tr -d '\n')"
-```
+YouTube has blocked downloads from the Modal cloud IP in testing. Cloud-hosted downloads need a dedicated YouTube account's Netscape-format `cookies.txt`; keep it out of Git. Encode its contents as `YTDLP_COOKIES_B64` in the Modal `youtube-cookies` secret, then attach that secret when deploying the Modal app. The dedicated cookie file and a fresh cloud job are still pending.
 
 Deploy (attach secrets with `MODAL_SECRETS`):
 
 ```bash
-MODAL_SECRETS=youtube-cookies make deploy-modal
+KARAOKE_MODAL_APP=karaoke-maker-prod MODAL_SECRETS=youtube-cookies make deploy-modal
 ```
 
 Run the API against Modal (default: download on your machine, GPU stem on Modal):
@@ -70,9 +66,9 @@ To repeat the live hybrid smoke test after deploying Modal, run `RUN_MODAL_SMOKE
 make test
 ```
 
-## GCP deploy (Phase 3)
+## Cloud staging
 
-See [deploy/README.md](deploy/README.md). Requires `gcloud`, a GCP project with billing, and Modal tokens in Secret Manager.
+The staging frontend is [Dad's Karaoke](https://karaoke-web-omadfssjbq-uc.a.run.app). It uses a family access code and currently points to the dev Modal app. An existing completed job returned status and an MP4 range through the Cloud Run proxy; no fresh Cloud Run job has completed yet. The dedicated YouTube cookie file is the remaining dependency for that test. See [deploy/README.md](deploy/README.md) for the project, scripts, and verification steps.
 
 For multi-agent handoff (architecture, pitfalls, backlog), see **[docs/HANDOFF.md](docs/HANDOFF.md)**.
 

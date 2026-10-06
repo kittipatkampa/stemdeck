@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import sys
 import threading
+import time
 from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import Any
@@ -25,6 +26,7 @@ if str(PIPELINE_ROOT.parent) not in sys.path:
 _active_local = 0
 _active_lock = threading.Lock()
 _runner: JobRunner | None = None
+ACTIVE_JOB_TIMEOUT_SEC = 30 * 60
 
 class JobRunner(ABC):
     @abstractmethod
@@ -100,7 +102,7 @@ class ModalRunner(JobRunner):
 
     def _set(self, job_id: str, **fields: Any) -> None:
         current = self._dict.get(job_id) or {}
-        self._dict[job_id] = {**current, **fields}
+        self._dict[job_id] = {**current, **fields, "updated_at": time.time()}
 
     def start(self, job_id: str, url: str) -> None:
         self._set(
@@ -111,6 +113,7 @@ class ModalRunner(JobRunner):
             overall_progress=0.0,
             title=None,
             error=None,
+            created_at=time.time(),
         )
         if modal_local_download():
             global _active_local
@@ -178,12 +181,22 @@ class ModalRunner(JobRunner):
         state = self._dict.get(job_id)
         if state is None:
             return None
+        if self._is_stale(state):
+            self._set(job_id, status="failed", error="Job timed out")
+            state = self._dict.get(job_id)
         return {"job_id": job_id, **state}
+
+    @staticmethod
+    def _is_stale(state: dict[str, Any]) -> bool:
+        if state.get("status") not in ("queued", "running"):
+            return False
+        updated_at = state.get("updated_at") or state.get("created_at")
+        return not isinstance(updated_at, (int, float)) or time.time() - updated_at > ACTIVE_JOB_TIMEOUT_SEC
 
     def count_active(self) -> int:
         n = 0
         for _key, state in self._dict.items():
-            if state.get("status") in ("queued", "running"):
+            if state.get("status") in ("queued", "running") and not self._is_stale(state):
                 n += 1
         return n
 

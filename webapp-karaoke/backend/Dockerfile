@@ -1,8 +1,5 @@
 FROM python:3.11-slim-bookworm
 
-RUN apt-get update && apt-get install -y --no-install-recommends ffmpeg \
-  && rm -rf /var/lib/apt/lists/*
-
 WORKDIR /app
 
 COPY backend/pyproject.toml /app/backend/
@@ -10,7 +7,7 @@ COPY pipeline /app/pipeline
 COPY backend/app /app/backend/app
 
 RUN pip install --no-cache-dir uv \
-  && cd /app/backend && uv pip install --system . --extra pipeline
+  && cd /app/backend && uv pip install --system .
 
 ENV PYTHONPATH=/app
 WORKDIR /app/backend

@@ -1,5 +1,25 @@
 const API_BASE = import.meta.env.VITE_API_BASE ?? '';
 
+export type AccessStatus = { required: boolean; authorized: boolean };
+
+export async function getAccessStatus(): Promise<AccessStatus> {
+  const res = await fetch(`${API_BASE}/api/access`);
+  if (!res.ok) throw new Error(`Could not check access (${res.status})`);
+  return res.json();
+}
+
+export async function enterAccessCode(code: string): Promise<void> {
+  const res = await fetch(`${API_BASE}/api/access`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ code }),
+  });
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error(body.detail ?? `Could not unlock app (${res.status})`);
+  }
+}
+
 export type Stage = 'download' | 'extract' | 'stem' | 'combine';
 
 export type JobStatus = {
@@ -19,6 +39,7 @@ export async function createJob(url: string): Promise<{ job_id: string }> {
     body: JSON.stringify({ url }),
   });
   if (!res.ok) {
+    if (res.status === 401) window.location.reload();
     const body = await res.json().catch(() => ({}));
     throw new Error(body.detail ?? `Request failed (${res.status})`);
   }
@@ -28,6 +49,7 @@ export async function createJob(url: string): Promise<{ job_id: string }> {
 export async function getJob(jobId: string): Promise<JobStatus> {
   const res = await fetch(`${API_BASE}/api/jobs/${jobId}`);
   if (!res.ok) {
+    if (res.status === 401) window.location.reload();
     const body = await res.json().catch(() => ({}));
     throw new Error(body.detail ?? `Request failed (${res.status})`);
   }

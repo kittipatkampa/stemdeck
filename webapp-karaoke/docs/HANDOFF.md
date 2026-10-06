@@ -54,7 +54,8 @@ sequenceDiagram
 | Backend | FastAPI | Local `:8000`; prod Cloud Run |
 | GPU stem | Demucs `htdemucs` | Modal T4, scale-to-zero |
 | Job state | JSON files (local) or `modal.Dict` (modal) | — |
-| Output (prod) | GCS bucket + signed URLs | Planned |
+| Output (current cloud staging) | Modal Volume, streamed by API | Deployed |
+| Output (planned) | GCS bucket + signed URLs | Not connected |
 
 **Reference test video:** `https://youtube.com/shorts/senFAeo0RQM`
 **Reference CLI output (same repo):** `karaoke_out/*_senFAeo0RQM_karaoke.mp4`
@@ -69,7 +70,7 @@ webapp-karaoke/
   backend/            # FastAPI, runners, storage, tests
   frontend/           # React UI: / and /j/:jobId
   modal/              # modal_app.py, spike_download.py
-  deploy/             # GCP scripts (not run on dev machine yet)
+  deploy/             # GCP scripts (staging deployed)
   docs/
     HANDOFF.md        # This file
     PERFORMANCE.md    # Timings and stage weights
@@ -109,11 +110,12 @@ webapp-karaoke/
 - `POST /api/jobs` → `202 { job_id }`
 - `GET /api/jobs/{id}` → status, stage, progress, title, error
 - `GET /api/jobs/{id}/download` → MP4 attachment (or `302` to GCS when configured)
-- `GET /healthz` → `pipeline`, `modal_local_download` when modal
+- `GET /healthz` or `/api/healthz` → `pipeline`, `modal_local_download` when modal
+- `GET /api/access`, `POST /api/access` → family access-code status and unlock
 
 ### Frontend (`frontend/`)
 
-- Home: URL + **Make it** → navigates to `/j/:jobId`
+- Home: access-code gate (when configured), then URL + **Make it** → navigates to `/j/:jobId`
 - Job page: 4-step progress, download + `<video>` preview on success
 
 ### Modal (`modal/modal_app.py`)
@@ -128,13 +130,14 @@ webapp-karaoke/
 
 ### Tests
 
-- `make test` — URL, progress, API smoke (10+ passed)
+- `make test` — URL, progress, access gate, stale jobs, API smoke (14 passed, 2 integration tests skipped on 2026-10-06)
 - `RUN_PIPELINE_INTEGRATION=1` — full local pipeline on test Short (~21s MPS)
 - `RUN_MODAL_SMOKE=1` — live Modal hybrid API test; `MODAL_SMOKE_JOB_ID=<completed ID>` rechecks an existing job without a new GPU run
 
 ### GCP
 
-- Dockerfiles, Cloud Build YAMLs, `deploy/*.sh` — **not executed** (no `gcloud` on original dev machine). See `deploy/README.md`.
+- Project `karaoke-machine-kk-20261006` under `kittipat@gmail.com`, with billing linked, service accounts and three secrets in place.
+- Cloud Run API and frontend are deployed. Same-origin access unlock, existing job status, and a 206 MP4 range response passed. A fresh job through Cloud Run is pending a dedicated YouTube cookie file. See `deploy/README.md`.
 
 ---
 
@@ -199,6 +202,7 @@ Full download on Modal CPU (`run_job`). Requires **`youtube-cookies`** Modal sec
 | `GCS_OUTPUT_BUCKET` | — | Enables GCS redirect on download |
 | `MAX_CONCURRENT_JOBS` | `2` | |
 | `MAX_DURATION_SEC` | `600` | |
+| `ACCESS_CODE` | (empty) | Shared family code; required in Cloud Run |
 
 Modal token: `~/.modal.toml` / `modal profile` (user: `kittipatkampa`).
 
@@ -214,19 +218,19 @@ Modal token: `~/.modal.toml` / `modal profile` (user: `kittipatkampa`).
 
 The test output was a 16.89-second VP9/AAC MP4. The opt-in smoke test passed against the completed job. The default test suite does not submit a new Modal job.
 
-### P1 — Production GCP (scripts exist, not deployed)
+### P1 — Production GCP (staging deployed, new cloud job pending)
 
-- [ ] Install `gcloud`, create GCP project + billing
-- [ ] Run `deploy/setup-gcp.sh`, `deploy-backend.sh`, `deploy-frontend.sh`
-- [ ] Secret Manager: `modal-token-id`, `modal-token-secret`
-- [ ] Set `FRONTEND_ORIGIN` / `VITE_API_BASE` on generated `*.run.app` URLs
-- [ ] Decide: `MODAL_LOCAL_DOWNLOAD=0` + cookies vs hybrid on Cloud Run egress
+- [x] Install `gcloud`; create project `karaoke-machine-kk-20261006` under `kittipat@gmail.com` with billing
+- [x] Run `deploy/setup-gcp.sh`, build both images, and deploy backend/frontend to Cloud Run
+- [x] Store Modal token pair and family access code in Secret Manager; verify same-origin proxy, access cookie, existing job status, and 206 MP4 range response
+- [x] Set Cloud Run to `MODAL_LOCAL_DOWNLOAD=0` to avoid background threads
+- [ ] Add a dedicated YouTube cookie file to Modal, deploy `karaoke-maker-prod`, and verify a **new** cloud job through the public URL
 
 ### P2 — Hardening
 
-- [ ] Access token or auth before public launch (GPU cost)
-- [ ] Modal spend limits; Cloud Run max instances
-- [ ] Job TTL / Dict cleanup aligned with GCS 1-day lifecycle
+- [x] Family access code before job/status/download requests; Cloud Run max instances = 1
+- [x] Modal workspace spend limit set to $5 in monthly charges after credits, on 2026-10-06
+- [x] Deploy 30-minute stale-job handling to Cloud Run and 24-hour Dict/Volume cleanup to the dev Modal app; stale handling passed unit tests. The scheduled cleanup has not yet reached its first eligible old cloud job.
 - [ ] Tune progress weights from Modal T4 timings (`docs/PERFORMANCE.md`)
 
 ### P3 — Nice to have

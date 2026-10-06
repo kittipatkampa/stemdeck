@@ -16,6 +16,7 @@ def test_healthz():
     r = client.get("/healthz")
     assert r.status_code == 200
     assert r.json()["status"] == "ok"
+    assert client.get("/api/healthz").status_code == 200
 
 
 def test_create_job_rejects_bad_url():

@@ -85,7 +85,7 @@ def _upload_to_gcs_if_configured(job_id: str, path: Path) -> None:
 
 def _update_job(job_id: str, **fields) -> None:
     current = jobs_state.get(job_id) or {}
-    jobs_state[job_id] = {**current, **fields}
+    jobs_state[job_id] = {**current, **fields, "updated_at": time.time()}
 
 
 def _finish_stem_and_mux(job_id: str, model: str, report) -> None:
@@ -269,19 +269,20 @@ def run_job(job_id: str, youtube_url: str, model: str = "htdemucs") -> None:
 
 @app.function(image=cpu_image, schedule=modal.Cron("0 */6 * * *"), volumes={"/data": volume})
 def cleanup_old_jobs(max_age_hours: int = 24) -> int:
-    if not DATA_ROOT.exists():
-        return 0
     cutoff = time.time() - max_age_hours * 3600
     removed = 0
     jobs_root = DATA_ROOT / "jobs"
-    if not jobs_root.exists():
-        return 0
-    for child in jobs_root.iterdir():
-        if not child.is_dir():
-            continue
-        if child.stat().st_mtime < cutoff:
-            shutil.rmtree(child, ignore_errors=True)
-            jobs_state.pop(child.name, None)
-            removed += 1
+    if jobs_root.exists():
+        for child in jobs_root.iterdir():
+            if not child.is_dir():
+                continue
+            if child.stat().st_mtime < cutoff:
+                shutil.rmtree(child, ignore_errors=True)
+                jobs_state.pop(child.name, None)
+                removed += 1
+    for job_id, state in jobs_state.items():
+        updated_at = state.get("updated_at") or state.get("created_at")
+        if isinstance(updated_at, (int, float)) and updated_at < cutoff:
+            jobs_state.pop(job_id, None)
     volume.commit()
     return removed
