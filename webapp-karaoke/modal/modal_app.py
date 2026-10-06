@@ -60,9 +60,10 @@ def _cookiefile_from_env() -> str | None:
     raw = os.environ.get("YTDLP_COOKIES_B64")
     if not raw:
         return None
-    path = Path(tempfile.gettempdir()) / "youtube_cookies.txt"
-    path.write_bytes(base64.b64decode(raw))
-    return str(path)
+    content = base64.b64decode(raw, validate=True)
+    with tempfile.NamedTemporaryFile(prefix="youtube_cookies_", suffix=".txt", delete=False) as cookie_file:
+        cookie_file.write(content)
+        return cookie_file.name
 
 
 def _upload_to_gcs_if_configured(job_id: str, path: Path) -> None:
@@ -210,7 +211,7 @@ def run_job(job_id: str, youtube_url: str, model: str = "htdemucs") -> None:
     job_dir = DATA_ROOT / "jobs" / job_id
     job_dir.mkdir(parents=True, exist_ok=True)
     output_mp4 = job_dir / "output.mp4"
-    cookiefile = _cookiefile_from_env()
+    cookiefile: str | None = None
 
     def report(stage: Stage, pct: float, extra: dict) -> None:
         title = extra.get("title")
@@ -235,6 +236,7 @@ def run_job(job_id: str, youtube_url: str, model: str = "htdemucs") -> None:
     )
 
     try:
+        cookiefile = _cookiefile_from_env()
         ffmpeg = require_ffmpeg()
         with tempfile.TemporaryDirectory(dir="/tmp") as tmp:
             tmp_path = Path(tmp)
@@ -265,6 +267,9 @@ def run_job(job_id: str, youtube_url: str, model: str = "htdemucs") -> None:
         _update_job(job_id, status="failed", error=str(e))
     except Exception as e:
         _update_job(job_id, status="failed", error=str(e))
+    finally:
+        if cookiefile:
+            Path(cookiefile).unlink(missing_ok=True)
 
 
 @app.function(image=cpu_image, schedule=modal.Cron("0 */6 * * *"), volumes={"/data": volume})
