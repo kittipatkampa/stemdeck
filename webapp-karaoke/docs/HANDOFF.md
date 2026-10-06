@@ -219,6 +219,8 @@ Modal token: `~/.modal.toml` / `modal profile` (user: `kittipatkampa`).
 
 The test output was a 16.89-second VP9/AAC MP4. The opt-in smoke test passed against the completed job. The default test suite does not submit a new Modal job.
 
+The same hybrid smoke test passed against `karaoke-maker-prod` on 2026-10-06 (job `a04fe3cb179d`, 55.06 seconds including test polling and output download). This verifies production Modal stem/mux once the input is downloaded on this Mac.
+
 ### P1 — Production GCP (staging deployed, new cloud job blocked)
 
 - [x] Install `gcloud`; create project `karaoke-machine-kk-20261006` under `kittipat@gmail.com` with billing

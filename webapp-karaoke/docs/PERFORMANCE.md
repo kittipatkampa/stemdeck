@@ -27,6 +27,12 @@ Tune after measuring real jobs on local MPS and Modal T4.
 - **Wall time:** ~21s end-to-end on Apple Silicon (download + extract + Demucs + mux)
 - **Output:** `webapp-karaoke/.data/integration_test.mp4` (>100 KB)
 
+## Production Modal hybrid smoke test
+
+- **Job:** `a04fe3cb179d` on `karaoke-maker-prod`, 2026-10-06
+- **Result:** Done; status polling and full MP4 download checks passed after downloading and extracting on this Mac.
+- **Test wall time:** 55.06 seconds, including polling and download validation. This is not a per-stage benchmark.
+
 ## Reference output
 
 The standalone CLI already produced a karaoke MP4 for the test Short under repo `karaoke_out/`. Compare duration and subjective vocal removal when validating the web app pipeline.
