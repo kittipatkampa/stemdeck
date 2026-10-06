@@ -373,6 +373,18 @@ The library is persistent by default (`STEMDECK_PERSIST_LIBRARY=1`), so tracks a
 
 ---
 
+## Karaoke CLI
+
+Server-less helper that downloads a YouTube video you have the right to process, strips vocals with Demucs, and writes a karaoke MP4 (original video plus backing audio). Requires [`uv`](https://docs.astral.sh/uv/) and `ffmpeg` on PATH. For personal use only.
+
+```bash
+uv run scripts/karaoke.py https://youtube.com/shorts/VIDEO_ID
+```
+
+The MP4 lands in `./karaoke_out/` by default. The script prints the absolute path and a `file://` URI. Optional flags: `-o DIR`, `--keep-stems`, `--model htdemucs_ft`, `--device mps|cuda|cpu`. Some vocal bleed remains; there are no on-screen lyrics.
+
+---
+
 ## Configuration
 
 | Variable | Default | Purpose |
