@@ -3,8 +3,10 @@
 from __future__ import annotations
 
 import base64
+import json
 import os
 import shutil
+import subprocess
 import tempfile
 import time
 from pathlib import Path
@@ -273,6 +275,64 @@ def run_job(job_id: str, youtube_url: str, model: str = "htdemucs") -> None:
     finally:
         if cookiefile:
             Path(cookiefile).unlink(missing_ok=True)
+
+
+@app.function(
+    image=cpu_image,
+    timeout=1200,
+    volumes={"/data": volume},
+)
+def run_uploaded_job(
+    job_id: str, suffix: str, max_duration_sec: int = 600, model: str = "htdemucs"
+) -> None:
+    """Process a device-uploaded video already staged in the private Volume."""
+    import sys
+
+    sys.path.insert(0, "/root")
+    from pipeline.progress import Stage, overall_progress
+    from pipeline.stages import extract_tracks, require_ffmpeg
+
+    def report(stage: Stage, pct: float, extra: dict) -> None:
+        _update_job(
+            job_id,
+            status="running",
+            stage=stage,
+            stage_progress=pct,
+            overall_progress=extra.get("overall_progress", overall_progress(stage, pct)),
+            error=None,
+        )
+
+    try:
+        volume.reload()
+        job_dir = DATA_ROOT / "jobs" / job_id
+        source = job_dir / f"source{suffix}"
+        if not source.is_file():
+            raise FileNotFoundError("Uploaded video is missing")
+        ffmpeg = require_ffmpeg()
+        probe = subprocess.run(
+            ["ffprobe", "-v", "error", "-show_format", "-of", "json", str(source)],
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+        duration = float(json.loads(probe.stdout)["format"]["duration"])
+        if duration <= 0 or duration > max_duration_sec:
+            raise ValueError(f"Video must be at most {max_duration_sec // 60} minutes")
+        video_only, audio_wav = extract_tracks(ffmpeg, source, job_dir / "extract", report)
+        shutil.copy2(audio_wav, job_dir / "audio.wav")
+        shutil.copy2(video_only, job_dir / "video_only.mp4")
+        volume.commit()
+        _finish_stem_and_mux(job_id, model, report)
+        _update_job(
+            job_id,
+            status="done",
+            stage="combine",
+            stage_progress=1.0,
+            overall_progress=1.0,
+            output_path=str(job_dir / "output.mp4"),
+        )
+    except Exception as e:
+        _update_job(job_id, status="failed", error=str(e))
 
 
 @app.function(image=cpu_image, schedule=modal.Cron("0 */6 * * *"), volumes={"/data": volume})

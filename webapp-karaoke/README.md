@@ -1,6 +1,6 @@
 # Karaoke web app
 
-Turn a YouTube URL into a vocal-free karaoke MP4. Frontend (Vite + React) talks to a thin FastAPI backend; heavy work runs locally (default) or on [Modal](https://modal.com) serverless GPU.
+Turn a video into a vocal-free karaoke MP4. The public app accepts a video file selected on a laptop or phone. Local development also accepts a YouTube URL. Frontend (Vite + React) talks to a thin FastAPI backend; heavy work runs locally (default) or on [Modal](https://modal.com) serverless GPU.
 
 ## Prerequisites
 
@@ -38,10 +38,12 @@ Jobs and outputs are stored under `webapp-karaoke/.data/` (gitignored).
 | `MAX_CONCURRENT_JOBS` | `2` | Per-backend instance |
 | `MAX_DURATION_SEC` | `600` | Max video length |
 | `ACCESS_CODE` | unset | When set, require a shared code before API jobs and downloads |
+| `GCS_UPLOAD_BUCKET` | unset | Enables browser-to-GCS video uploads in Modal mode |
+| `ENABLE_YOUTUBE_URLS` | `1` | Set to `0` on Cloud Run while YouTube rejects Modal metadata requests |
 
 ## Modal (serverless GPU)
 
-YouTube has blocked downloads from the Modal cloud IP in testing. The dedicated YouTube account's Netscape-format `cookies.txt` is stored in the Modal `youtube-cookies` secret as `YTDLP_COOKIES_B64` (never in Git). The production Modal app uses that secret, but new cloud jobs still fail during YouTube metadata lookup with “The page needs to be reloaded.” The same cookies and yt-dlp version work from this Mac. A different download path is needed before sharing the cloud app for new jobs.
+YouTube has blocked downloads from the Modal cloud IP in testing. The dedicated YouTube account's Netscape-format `cookies.txt` is stored in the Modal `youtube-cookies` secret as `YTDLP_COOKIES_B64` (never in Git). The production Modal app uses that secret, but cloud metadata lookup still fails. The public app therefore accepts a file already saved on the user's device and uploads it directly to private GCS. The API stages it in the Modal Volume; the Modal CPU extracts tracks, the GPU separates vocals, and the CPU combines the MP4.
 
 Deploy (attach secrets with `MODAL_SECRETS`):
 
@@ -68,7 +70,7 @@ make test
 
 ## Cloud staging
 
-The staging frontend is [Dad's Karaoke](https://karaoke-web-omadfssjbq-uc.a.run.app). It uses a family access code and points to `karaoke-maker-prod`. An existing dev job returned status and an MP4 range through the Cloud Run proxy. Fresh production jobs reached Modal but failed at YouTube metadata lookup despite the dedicated cookie secret. See [deploy/README.md](deploy/README.md) for the project, scripts, and current blocker.
+The staging frontend is [Dad's Karaoke](https://karaoke-web-omadfssjbq-uc.a.run.app). It uses a family access code and points to `karaoke-maker-prod`. A fresh 21 MB device-file upload completed as job `87ea3a17d655` on 2026-10-06, including browser CORS preflight, direct GCS PUT, Modal processing, and an MP4 range response. The user must first save the video file on the device; a web page cannot automatically download YouTube media from a pasted URL. See [deploy/README.md](deploy/README.md) for deployment details.
 
 For multi-agent handoff (architecture, pitfalls, backlog), see **[docs/HANDOFF.md](docs/HANDOFF.md)**.
 

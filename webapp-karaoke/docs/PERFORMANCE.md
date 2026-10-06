@@ -8,7 +8,7 @@ Recorded during initial implementation (Oct 2026).
 - **Result:** Failed on Modal datacenter IP with YouTube bot check (`Sign in to confirm you're not a bot`).
 - **Working route:** `PIPELINE=local` or the locally hosted hybrid mode downloads on this Mac before sending extracted tracks to Modal.
 
-The dedicated cookies were installed on 2026-10-06. They work from this Mac, but new production Modal jobs still fail at metadata lookup with “The page needs to be reloaded.” Pinning yt-dlp to the locally working `2026.8.19` release and trying the documented `web_embedded` player client did not resolve the Modal failure. No production T4 stage timings are available yet because these jobs never reached extraction.
+The dedicated cookies were installed on 2026-10-06. They work from this Mac, but new production Modal URL jobs still fail at metadata lookup with “The page needs to be reloaded.” Pinning yt-dlp to the locally working `2026.8.19` release and trying the documented `web_embedded` player client did not resolve the Modal failure. The public app now uses a device-file upload path.
 
 ## Stage weights (initial)
 
@@ -32,6 +32,13 @@ Tune after measuring real jobs on local MPS and Modal T4.
 - **Job:** `a04fe3cb179d` on `karaoke-maker-prod`, 2026-10-06
 - **Result:** Done; status polling and full MP4 download checks passed after downloading and extracting on this Mac.
 - **Test wall time:** 55.06 seconds, including polling and download validation. This is not a per-stage benchmark.
+
+## Public device-file smoke test
+
+- **Job:** `87ea3a17d655` on `karaoke-maker-prod`, 2026-10-06
+- **Input:** 21 MB source MP4 saved on the local device
+- **Result:** GCS browser CORS preflight and direct PUT passed; public API completed the upload, Modal reached `done`, and the Cloud Run proxy returned 206 with MP4 bytes for a range request.
+- **Limit:** This tested one small input through the public URL. Phone file-picker behavior and near-limit 500 MB transfers remain untested.
 
 ## Reference output
 

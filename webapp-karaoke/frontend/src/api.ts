@@ -1,6 +1,13 @@
 const API_BASE = import.meta.env.VITE_API_BASE ?? '';
 
 export type AccessStatus = { required: boolean; authorized: boolean };
+export type Capabilities = { youtube_url: boolean; file_upload: boolean; max_upload_bytes: number };
+
+export async function getCapabilities(): Promise<Capabilities> {
+  const res = await fetch(`${API_BASE}/api/capabilities`);
+  if (!res.ok) throw new Error(`Could not check app capabilities (${res.status})`);
+  return res.json();
+}
 
 export async function getAccessStatus(): Promise<AccessStatus> {
   const res = await fetch(`${API_BASE}/api/access`);
@@ -44,6 +51,50 @@ export async function createJob(url: string): Promise<{ job_id: string }> {
     throw new Error(body.detail ?? `Request failed (${res.status})`);
   }
   return res.json();
+}
+
+export async function createUpload(file: File): Promise<{ job_id: string; upload_url: string; content_type: string }> {
+  const res = await fetch(`${API_BASE}/api/uploads`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ filename: file.name, size: file.size }),
+  });
+  if (!res.ok) {
+    if (res.status === 401) window.location.reload();
+    const body = await res.json().catch(() => ({}));
+    throw new Error(body.detail ?? `Could not prepare upload (${res.status})`);
+  }
+  return res.json();
+}
+
+export function uploadVideo(url: string, file: File, contentType: string, onProgress: (fraction: number) => void): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open('PUT', url);
+    xhr.setRequestHeader('Content-Type', contentType);
+    xhr.upload.onprogress = (event) => {
+      if (event.lengthComputable) onProgress(event.loaded / event.total);
+    };
+    xhr.onload = () => {
+      if (xhr.status >= 200 && xhr.status < 300) resolve();
+      else reject(new Error(`Video upload failed (${xhr.status})`));
+    };
+    xhr.onerror = () => reject(new Error('Video upload failed. Check your connection and try again.'));
+    xhr.send(file);
+  });
+}
+
+export async function completeUpload(jobId: string, size: number): Promise<void> {
+  const res = await fetch(`${API_BASE}/api/uploads/${jobId}/complete`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ size }),
+  });
+  if (!res.ok) {
+    if (res.status === 401) window.location.reload();
+    const body = await res.json().catch(() => ({}));
+    throw new Error(body.detail ?? `Could not start job (${res.status})`);
+  }
 }
 
 export async function getJob(jobId: string): Promise<JobStatus> {

@@ -32,6 +32,14 @@ def get_gcs_bucket() -> str | None:
     return os.environ.get("GCS_OUTPUT_BUCKET")
 
 
+def get_upload_bucket() -> str | None:
+    return os.environ.get("GCS_UPLOAD_BUCKET")
+
+
+def youtube_urls_enabled() -> bool:
+    return os.environ.get("ENABLE_YOUTUBE_URLS", "1").lower() in ("1", "true", "yes")
+
+
 def get_storage_mode() -> str:
     if get_gcs_bucket():
         return "gcs"

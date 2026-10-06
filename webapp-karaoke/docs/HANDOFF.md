@@ -9,12 +9,12 @@
 
 Build a web app where a user:
 
-1. Pastes a **YouTube URL**
-2. Clicks **Make it**
+1. Selects a video file on a laptop or phone, or pastes a **YouTube URL** in local development
+2. Clicks **Make karaoke video**
 3. Sees a **4-stage progress bar**: download → extract → stem → combine
 4. **Downloads** a karaoke MP4 (video + instrumental / no-vocals audio)
 
-**Non-goals (v1):** accounts, history, lyrics, multi-stem export, non-YouTube sources.
+**Non-goals (v1):** accounts, history, lyrics, multi-stem export. A file picker was added because YouTube rejects Modal metadata requests even with dedicated cookies.
 
 **Legal note:** Downloading and altering YouTube content may violate YouTube ToS or copyright. Treat as personal tooling until explicitly cleared for public use.
 
@@ -26,19 +26,30 @@ Build a web app where a user:
 sequenceDiagram
     participant FE as Frontend_Vite_React
     participant BE as Backend_FastAPI
+    participant GCS as Private_GCS_input
     participant MD as Modal_Dict_jobs
     participant CPU as Modal_CPU
     participant GPU as Modal_GPU_T4
-    FE->>BE: POST /api/jobs url
-    BE->>BE: validate URL rate limit
-    alt PIPELINE_local
-        BE->>BE: run pipeline on host MPS_CPU
-    else PIPELINE_modal hybrid default
-        BE->>BE: download extract on API host
-        BE->>MD: batch_upload audio.wav and video_only.mp4
-        BE->>CPU: run_staged_job.remote job_id
+    alt public device-file path
+        FE->>BE: request resumable upload session
+        BE-->>FE: upload URL
+        FE->>GCS: PUT selected video file
+        FE->>BE: complete upload
+        BE->>GCS: verify and read video
+        BE->>MD: stage source file in Volume
+        BE->>CPU: run_uploaded_job.spawn
         CPU->>GPU: separate_stems.remote
-        CPU->>CPU: mux to output.mp4
+    else local YouTube URL path
+        FE->>BE: POST /api/jobs url
+        BE->>BE: validate URL rate limit
+        alt PIPELINE_local
+            BE->>BE: run pipeline on host MPS_CPU
+        else PIPELINE_modal hybrid
+            BE->>BE: download extract on API host
+            BE->>MD: batch_upload audio.wav and video_only.mp4
+            BE->>CPU: run_staged_job.remote job_id
+            CPU->>GPU: separate_stems.remote
+        end
     end
     loop poll 1s
         FE->>BE: GET /api/jobs/id
@@ -55,6 +66,7 @@ sequenceDiagram
 | GPU stem | Demucs `htdemucs` | Modal T4, scale-to-zero |
 | Job state | JSON files (local) or `modal.Dict` (modal) | — |
 | Output (current cloud staging) | Modal Volume, streamed by API | Deployed |
+| Input upload (public) | Private GCS resumable upload session | Deployed and E2E verified |
 | Output (planned) | GCS bucket + signed URLs | Not connected |
 
 **Reference test video:** `https://youtube.com/shorts/senFAeo0RQM`
@@ -103,6 +115,7 @@ webapp-karaoke/
 | `runner.py` | `LocalRunner` vs `ModalRunner` |
 | `job_state.py` | Local job JSON under `.data/jobs/` |
 | `storage.py` | Stream MP4; GCS signed URL hook (prod) |
+| `uploads.py` | Private GCS resumable upload session and file validation |
 | `settings.py` | Env vars |
 
 **API**
@@ -112,10 +125,13 @@ webapp-karaoke/
 - `GET /api/jobs/{id}/download` → MP4 attachment (or `302` to GCS when configured)
 - `GET /healthz` or `/api/healthz` → `pipeline`, `modal_local_download` when modal
 - `GET /api/access`, `POST /api/access` → family access-code status and unlock
+- `GET /api/capabilities` → enabled input methods and file size limit
+- `POST /api/uploads` → GCS resumable upload URL for an allowed video file
+- `POST /api/uploads/{id}/complete` → verify file, stage to Modal Volume, start processing
 
 ### Frontend (`frontend/`)
 
-- Home: access-code gate (when configured), then URL + **Make it** → navigates to `/j/:jobId`
+- Home: access-code gate, then device file picker in public Cloud Run; YouTube URL form remains available locally
 - Job page: 4-step progress, download + `<video>` preview on success
 
 ### Modal (`modal/modal_app.py`)
@@ -123,6 +139,7 @@ webapp-karaoke/
 - **GPU:** `separate_stems` (Demucs on `audio.wav` → `no_vocals.wav`)
 - **CPU:** `run_job` (full pipeline on Modal — blocked by YouTube bot check without cookies)
 - **CPU:** `run_staged_job` (hybrid path: reads uploaded files from Volume, stems + muxes)
+- **CPU:** `run_uploaded_job` (device file staged in Volume: duration check, extract, stem + mux)
 - **Volume:** `karaoke-maker-dev-work` at `/data/karaoke/jobs/{id}/`
 - **Dict:** `karaoke-maker-dev-jobs`
 - **Cron:** `cleanup_old_jobs` (24h)
@@ -137,7 +154,7 @@ webapp-karaoke/
 ### GCP
 
 - Project `karaoke-machine-kk-20261006` under `kittipat@gmail.com`, with billing linked, service accounts and three secrets in place.
-- Cloud Run API and frontend are deployed. Same-origin access unlock, existing dev job status, and a 206 MP4 range response passed. Fresh production jobs reach Modal but fail at YouTube metadata lookup even with the dedicated cookie file; see `deploy/README.md`.
+- Cloud Run API and frontend are deployed. Same-origin access unlock and a fresh device-file job through the public URL passed on 2026-10-06: GCS CORS preflight/PUT, Modal processing, status `done`, and a 206 MP4 range response (`87ea3a17d655`). URL jobs remain disabled in the public UI because Modal cannot read YouTube metadata.
 
 ---
 
@@ -171,7 +188,7 @@ Frontend: `cd webapp-karaoke/frontend && npm run dev` (or `make dev` for both).
 
 ### `PIPELINE=modal` + `MODAL_LOCAL_DOWNLOAD=0`
 
-Full download on Modal CPU (`run_job`). The production app has the **`youtube-cookies`** Modal secret (`YTDLP_COOKIES_B64`), but YouTube still rejects metadata requests from Modal. Cloud Run currently uses this mode, so new jobs fail at download until a working download route is chosen.
+Full download on Modal CPU (`run_job`). The production app has the **`youtube-cookies`** Modal secret (`YTDLP_COOKIES_B64`), but YouTube still rejects metadata requests from Modal. Cloud Run has `ENABLE_YOUTUBE_URLS=0` and instead accepts a video file from the device, uploaded directly to GCS and staged for `run_uploaded_job`.
 
 ---
 
@@ -179,7 +196,7 @@ Full download on Modal CPU (`run_job`). The production app has the **`youtube-co
 
 | Issue | Symptom | Fix |
 |--------|---------|-----|
-| yt-dlp on Modal IP | Bot check without cookies; “page needs to be reloaded” with dedicated cookies | Hybrid download on a host where YouTube permits it; a cloud route is still needed |
+| yt-dlp on Modal IP | Bot check without cookies; “page needs to be reloaded” with dedicated cookies | Public app uses device file upload; local hybrid URL mode remains available |
 | App/secret names only set at deploy | Container sees dev defaults and fails to hydrate dependencies | Bake `KARAOKE_MODAL_APP` and `MODAL_SECRETS` names into the images through `APP_ENV` |
 | `volume.commit()` from laptop | `commit() can only be called on a mounted volume inside a container` | Never commit from backend; only inside `@app.function` |
 | Stale volume across containers | `missing no_vocals.wav` after GPU step | `volume.reload()` after `separate_stems.remote()` and at GPU entry |
@@ -201,6 +218,8 @@ Full download on Modal CPU (`run_job`). The production app has the **`youtube-co
 | `MODAL_SECRETS` | (empty) | e.g. `youtube-cookies,gcp-upload` at **deploy** time |
 | `YTDLP_COOKIE_FILE` | — | Local path for API-side download |
 | `GCS_OUTPUT_BUCKET` | — | Enables GCS redirect on download |
+| `GCS_UPLOAD_BUCKET` | — | Enables direct browser upload to private GCS in Modal mode |
+| `ENABLE_YOUTUBE_URLS` | `1` | `0` on Cloud Run while Modal URL extraction fails |
 | `MAX_CONCURRENT_JOBS` | `2` | |
 | `MAX_DURATION_SEC` | `600` | |
 | `ACCESS_CODE` | (empty) | Shared family code; required in Cloud Run |
@@ -221,14 +240,15 @@ The test output was a 16.89-second VP9/AAC MP4. The opt-in smoke test passed aga
 
 The same hybrid smoke test passed against `karaoke-maker-prod` on 2026-10-06 (job `a04fe3cb179d`, 55.06 seconds including test polling and output download). This verifies production Modal stem/mux once the input is downloaded on this Mac.
 
-### P1 — Production GCP (staging deployed, new cloud job blocked)
+### P1 — Production GCP (device-file path verified)
 
 - [x] Install `gcloud`; create project `karaoke-machine-kk-20261006` under `kittipat@gmail.com` with billing
 - [x] Run `deploy/setup-gcp.sh`, build both images, and deploy backend/frontend to Cloud Run
 - [x] Store Modal token pair and family access code in Secret Manager; verify same-origin proxy, access cookie, existing job status, and 206 MP4 range response
 - [x] Set Cloud Run to `MODAL_LOCAL_DOWNLOAD=0` to avoid background threads
 - [x] Add the dedicated YouTube cookie file to Modal and deploy `karaoke-maker-prod`; Cloud Run points to it
-- [ ] Establish a download route that works from the public app, then verify a **new** job through download and browser playback. Cookie-backed Modal jobs `f472aa272f49`, `3578735a4611`, and `a71e1eec2052` failed during metadata lookup; the same file works locally. yt-dlp `2026.8.19` and the documented `web_embedded` client were tried without changing the cloud result.
+- [x] Public device-file path: private GCS resumable upload, API staging, Modal CPU/GPU, and MP4 download (job `87ea3a17d655`; API returned 206 for a range request). The user must first save the video file on the device.
+- [ ] Verify the complete file selection and playback flow in a phone browser. The public URL form stays disabled. Cookie-backed Modal URL jobs `f472aa272f49`, `3578735a4611`, and `a71e1eec2052` failed during metadata lookup; the same file works locally. yt-dlp `2026.8.19` and `web_embedded` did not change the cloud result.
 
 ### P2 — Hardening
 
@@ -236,6 +256,7 @@ The same hybrid smoke test passed against `karaoke-maker-prod` on 2026-10-06 (jo
 - [x] Modal workspace spend limit set to $5 in monthly charges after credits, on 2026-10-06
 - [x] Deploy 30-minute stale-job handling to Cloud Run and 24-hour Dict/Volume cleanup to the dev Modal app; stale handling passed unit tests. The scheduled cleanup has not yet reached its first eligible old cloud job.
 - [ ] Tune progress weights from Modal T4 timings (`docs/PERFORMANCE.md`)
+- [ ] Move GCS input transfer into a background worker if 500 MB uploads approach the 900-second API/proxy request timeout
 
 ### P3 — Nice to have
 

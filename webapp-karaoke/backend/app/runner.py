@@ -99,6 +99,9 @@ class ModalRunner(JobRunner):
         self._fn_stem_mux = modal.Function.from_name(
             get_modal_app_name(), "run_staged_job"
         )
+        self._fn_uploaded = modal.Function.from_name(
+            get_modal_app_name(), "run_uploaded_job"
+        )
 
     def _set(self, job_id: str, **fields: Any) -> None:
         current = self._dict.get(job_id) or {}
@@ -126,6 +129,32 @@ class ModalRunner(JobRunner):
             ).start()
         else:
             self._fn.spawn(job_id, url)
+
+    def reserve_upload(self, job_id: str, title: str) -> None:
+        if self._dict.get(job_id) is not None:
+            raise ValueError("Job already started")
+        self._set(
+            job_id,
+            status="running",
+            stage="download",
+            stage_progress=0.0,
+            overall_progress=0.0,
+            title=title,
+            error=None,
+            created_at=time.time(),
+        )
+
+    def start_uploaded(self, job_id: str, source: Path, suffix: str) -> None:
+        volume = modal.Volume.from_name(
+            f"{get_modal_app_name()}-work", create_if_missing=True
+        )
+        with volume.batch_upload() as batch:
+            batch.put_file(str(source), f"karaoke/jobs/{job_id}/source{suffix}")
+        self._set(job_id, status="queued", stage_progress=1.0, overall_progress=0.2)
+        self._fn_uploaded.spawn(job_id, suffix, get_max_duration_sec())
+
+    def fail_upload(self, job_id: str, error: str) -> None:
+        self._set(job_id, status="failed", error=error)
 
     def _download_locally_then_modal(self, job_id: str, url: str) -> None:
         global _active_local
