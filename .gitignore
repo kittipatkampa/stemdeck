@@ -45,6 +45,7 @@ htmlcov/
 # Runtime job artifacts and local build scratch
 data/
 jobs/
+karaoke_out/
 cache/
 models/
 settings.json
