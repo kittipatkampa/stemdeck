@@ -45,7 +45,7 @@ export function JobPage() {
   return (
     <main className="page">
       <Link to="/" className="back">← New video</Link>
-      <h1>{title}</h1>
+      <h2 className="job-title">{title}</h2>
       {error && <p className="error" role="alert">{error}</p>}
       {job && job.status !== 'failed' && (
         <ProgressStepper

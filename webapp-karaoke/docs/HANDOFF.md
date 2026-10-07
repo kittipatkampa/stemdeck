@@ -132,6 +132,7 @@ webapp-karaoke/
 ### Frontend (`frontend/`)
 
 - Home: access-code gate, then YouTube URL and device file panels. Valid YouTube links show an embedded video preview before download; watch, short links, Shorts, live, and embed URLs are supported.
+- Header: Light/Dark theme selector on every page; defaults to the device theme and remembers the selection locally. Both intake buttons say “Make karaoke video”.
 - Job page: 4-step progress, download + `<video>` preview on success
 
 ### Modal (`modal/modal_app.py`)

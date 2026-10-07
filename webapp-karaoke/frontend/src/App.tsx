@@ -31,13 +31,12 @@ export default function App() {
   }
 
   if (!access) {
-    return <main className="page"><h1>Karaoke Maker</h1><p>{error ?? 'Loading…'}</p></main>;
+    return <main className="page"><p>{error ?? 'Loading…'}</p></main>;
   }
 
   if (access.required && !access.authorized) {
     return (
       <main className="page">
-        <h1>Karaoke Maker</h1>
         <p className="subtitle">Enter the family access code to continue.</p>
         <form className="url-form" onSubmit={unlock}>
           <label htmlFor="access-code">Access code</label>

@@ -67,7 +67,6 @@ export function HomePage() {
 
   return (
     <main className="page">
-      <h1>Karaoke Maker</h1>
       <p className="subtitle">Make a karaoke MP4 without vocals.</p>
       {capabilities?.youtube_url && <form className="url-form input-panel" onSubmit={onSubmit}>
         <h2>Paste a YouTube link</h2>
@@ -96,7 +95,7 @@ export function HomePage() {
           </p>
         </section>}
         <button type="submit" disabled={loading}>
-          {loading ? 'Starting download…' : 'Download and make karaoke'}
+          {loading ? 'Starting download…' : 'Make karaoke video'}
         </button>
       </form>}
       {capabilities?.file_upload && <form className="url-form input-panel" onSubmit={onUpload}>

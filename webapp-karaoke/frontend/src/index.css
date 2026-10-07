@@ -1,8 +1,35 @@
+/* Shared colors keep the home, access, and job pages in the same theme. */
+:root {
+  color-scheme: light;
+  --text: #0f172a;
+  --page: #f1f5f9;
+  --surface: #fff;
+  --muted: #475569;
+  --border: #cbd5e1;
+  --track: #e2e8f0;
+  --link: #2563eb;
+  --error: #b91c1c;
+  --success: #15803d;
+}
+
+:root[data-theme='dark'] {
+  color-scheme: dark;
+  --text: #f1f5f9;
+  --page: #0b1220;
+  --surface: #162033;
+  --muted: #aab9ce;
+  --border: #40516b;
+  --track: #2a3850;
+  --link: #93c5fd;
+  --error: #fca5a5;
+  --success: #86efac;
+}
+
 :root {
   font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
   line-height: 1.5;
-  color: #0f172a;
-  background: #f1f5f9;
+  color: var(--text);
+  background: var(--page);
 }
 
 * {
@@ -17,16 +44,16 @@ body {
 .page {
   max-width: 640px;
   margin: 0 auto;
-  padding: 2rem 1.25rem 3rem;
+  padding: 0.5rem 1.25rem 3rem;
 }
 
-h1 {
+h1, .job-title {
   font-size: 1.75rem;
   margin: 0 0 0.5rem;
 }
 
 .subtitle {
-  color: #475569;
+  color: var(--muted);
   margin: 0 0 1.5rem;
 }
 
@@ -42,9 +69,9 @@ h1 {
 
 .input-panel {
   padding: 1.25rem;
-  border: 1px solid #cbd5e1;
+  border: 1px solid var(--border);
   border-radius: 12px;
-  background: #fff;
+  background: var(--surface);
 }
 
 .input-panel h2 {
@@ -59,9 +86,11 @@ h1 {
 
 .url-form input {
   padding: 0.75rem 0.85rem;
-  border: 1px solid #cbd5e1;
+  border: 1px solid var(--border);
   border-radius: 8px;
   font-size: 1rem;
+  background: var(--surface);
+  color: var(--text);
 }
 
 .url-form button,
@@ -85,18 +114,18 @@ h1 {
 }
 
 .error {
-  color: #b91c1c;
+  color: var(--error);
   margin-top: 1rem;
 }
 
 .muted {
-  color: #64748b;
+  color: var(--muted);
 }
 
 .back {
   display: inline-block;
   margin-bottom: 1rem;
-  color: #2563eb;
+  color: var(--link);
   text-decoration: none;
 }
 
@@ -106,7 +135,7 @@ h1 {
 
 .overall-bar {
   height: 10px;
-  background: #e2e8f0;
+  background: var(--track);
   border-radius: 999px;
   overflow: hidden;
 }
@@ -119,7 +148,7 @@ h1 {
 
 .overall-label {
   font-size: 0.9rem;
-  color: #475569;
+  color: var(--muted);
   margin: 0.5rem 0 1rem;
 }
 
@@ -135,8 +164,8 @@ h1 {
 .steps li {
   padding: 0.75rem;
   border-radius: 8px;
-  background: #fff;
-  border: 1px solid #e2e8f0;
+  background: var(--surface);
+  border: 1px solid var(--track);
 }
 
 .steps li.active {
@@ -144,7 +173,7 @@ h1 {
 }
 
 .steps li.done .step-title {
-  color: #15803d;
+  color: var(--success);
 }
 
 .step-title {
@@ -155,7 +184,7 @@ h1 {
 
 .step-bar {
   height: 6px;
-  background: #e2e8f0;
+  background: var(--track);
   border-radius: 999px;
   overflow: hidden;
 }
@@ -195,3 +224,51 @@ h1 {
 .failed {
   margin-top: 1rem;
 }
+
+.app-header {
+  max-width: 640px;
+  margin: 0 auto;
+  padding: 2rem 1.25rem 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.app-header h1 { margin: 0; }
+
+.theme-switch {
+  display: flex;
+  padding: 3px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+}
+
+.theme-switch button {
+  min-height: 38px;
+  padding: 0.4rem 0.75rem;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.theme-switch button[aria-pressed='true'] {
+  background: #2563eb;
+  color: #fff;
+}
+
+a { color: var(--link); }
+
+:focus-visible {
+  outline: 3px solid var(--link);
+  outline-offset: 3px;
+}
+
+.url-form input::placeholder { color: var(--muted); }
