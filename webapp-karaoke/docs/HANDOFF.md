@@ -16,6 +16,7 @@ Live configuration rechecked on 2026-10-06 (Pacific). No new GPU job was submitt
 | Modal production | `karaoke-maker-prod`; production Dict/Volume use the `karaoke-maker-prod` prefix |
 | GCP | `karaoke-machine-kk-20261006` |
 | Git | `codex/karaoke-webapp-modal-hybrid` → `main`; deployed application code through `d24e09c` |
+| Pull request | [#5 — Add family karaoke web app with GCP downloads and Modal processing](https://github.com/kittipatkampa/stemdeck/pull/5), open for review |
 
 **Working:** family access-code gate; YouTube URL → GCP download → Modal extraction/stems/mux; device-file upload; progress; MP4 download/playback; embedded YouTube preview before starting; Light/Dark selector beside the title. Both input actions say **Make karaoke video**. Theme choice persists on the device across reloads and applies to the access, home, and job pages.
 
