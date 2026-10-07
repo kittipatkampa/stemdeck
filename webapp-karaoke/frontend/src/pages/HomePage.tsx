@@ -2,9 +2,7 @@ import { useEffect, useState } from 'react';
 import type { FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { completeUpload, createJob, createUpload, getCapabilities, uploadVideo, type Capabilities } from '../api';
-
-const YOUTUBE_HINT =
-  /^(https?:\/\/)?(www\.)?(youtube\.com|youtu\.be|m\.youtube\.com)\/.+/i;
+import { youtubeVideoId } from '../youtube';
 
 export function HomePage() {
   const [url, setUrl] = useState('');
@@ -15,6 +13,7 @@ export function HomePage() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+  const videoId = youtubeVideoId(url);
 
   useEffect(() => {
     getCapabilities().then(setCapabilities).catch((err) => setError(err.message));
@@ -28,7 +27,7 @@ export function HomePage() {
       setError('Paste a YouTube URL');
       return;
     }
-    if (!YOUTUBE_HINT.test(trimmed)) {
+    if (!videoId) {
       setError('Enter a valid YouTube URL');
       return;
     }
@@ -82,6 +81,20 @@ export function HomePage() {
           placeholder="https://youtube.com/watch?v=..."
           disabled={loading}
         />
+        {videoId && <section className="youtube-preview" aria-label="Video preview">
+          <iframe
+            key={videoId}
+            src={`https://www.youtube.com/embed/${videoId}?playsinline=1`}
+            title="YouTube video preview"
+            allow="accelerometer; encrypted-media; gyroscope; picture-in-picture; fullscreen"
+            referrerPolicy="strict-origin-when-cross-origin"
+            allowFullScreen
+          />
+          <p className="muted">
+            Check your video before starting.{' '}
+            <a href={`https://www.youtube.com/watch?v=${videoId}`} target="_blank" rel="noopener noreferrer">Open on YouTube</a>
+          </p>
+        </section>}
         <button type="submit" disabled={loading}>
           {loading ? 'Starting download…' : 'Download and make karaoke'}
         </button>

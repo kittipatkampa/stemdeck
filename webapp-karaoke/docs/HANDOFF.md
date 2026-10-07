@@ -131,7 +131,7 @@ webapp-karaoke/
 
 ### Frontend (`frontend/`)
 
-- Home: access-code gate, then YouTube URL and device file panels
+- Home: access-code gate, then YouTube URL and device file panels. Valid YouTube links show an embedded video preview before download; watch, short links, Shorts, live, and embed URLs are supported.
 - Job page: 4-step progress, download + `<video>` preview on success
 
 ### Modal (`modal/modal_app.py`)

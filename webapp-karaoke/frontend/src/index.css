@@ -166,6 +166,21 @@ h1 {
   transition: width 0.3s ease;
 }
 
+.youtube-preview {
+  margin-top: 0.5rem;
+}
+
+.youtube-preview iframe {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  min-height: 200px;
+  margin-bottom: 0.5rem;
+  border: 0;
+  border-radius: 8px;
+  background: #000;
+}
+
 .preview {
   width: 100%;
   margin-top: 1rem;
