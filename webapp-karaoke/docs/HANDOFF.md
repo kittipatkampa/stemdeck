@@ -1,7 +1,32 @@
-# Karaoke web app — plan & agent handoff
+# Karaoke web app — implementation and operations handoff
 
 **Last updated:** 2026-10-06
 **Owner context:** Standalone app under `webapp-karaoke/` inside the [stemdeck](https://github.com/kittipatkampa/stemdeck) repo. **Do not modify** `lovable-karaoke/` (separate Lovable.dev project). Reuse ideas from `scripts/karaoke.py` only by copying patterns into `webapp-karaoke/pipeline/`.
+
+## Current deployment and next steps
+
+Live configuration rechecked on 2026-10-06 (Pacific). No new GPU job was submitted for the handoff/PR update; processing evidence below is from the successful jobs earlier that day.
+
+| Component | Current deployment |
+|-----------|--------------------|
+| App | https://karaoke-web-omadfssjbq-uc.a.run.app |
+| Frontend | `karaoke-web-00006-tbx`, Cloud Run `us-central1` |
+| API | `karaoke-api-00006-lr9`, https://karaoke-api-omadfssjbq-uc.a.run.app, `us-central1` |
+| YouTube downloader | Cloud Run Job `karaoke-youtube-download`, `us-west1`; image `us-central1-docker.pkg.dev/karaoke-machine-kk-20261006/karaoke/youtube-downloader:20261006-v2` |
+| Modal production | `karaoke-maker-prod`; production Dict/Volume use the `karaoke-maker-prod` prefix |
+| GCP | `karaoke-machine-kk-20261006` |
+| Git | `codex/karaoke-webapp-modal-hybrid` → `main`; deployed application code through `d24e09c` |
+
+**Working:** family access-code gate; YouTube URL → GCP download → Modal extraction/stems/mux; device-file upload; progress; MP4 download/playback; embedded YouTube preview before starting; Light/Dark selector beside the title. Both input actions say **Make karaoke video**. Theme choice persists on the device across reloads and applies to the access, home, and job pages.
+
+**Next work, in order:**
+
+1. Verify URL entry, file selection, upload, finished playback, and MP4 saving on a real phone; check the header/theme switch at phone width. Desktop browser checks passed; phone behavior remains unverified.
+2. Observe production cleanup of an eligible old job and its files. The six-hour cron targets records/files older than 24 hours; source code and deployment are present, but a completed deletion has not been observed.
+3. Check cookie expiry/download failures as they arise and rotate the dedicated GCP cookie secret when needed. The file-upload route remains available.
+4. Measure long/large file transfers before changing API staging; move that transfer to a worker if it approaches the 900-second request timeout. Tune progress weights from actual T4 timing samples.
+
+GCS output delivery, SSE, automated browser tests, and media-quality comparisons remain optional backlog. Outputs currently stream from the Modal Volume; private GCS holds source uploads. The local `deploy/youtube-probe/` research artifacts and sibling `lovable-karaoke/` are untracked and excluded from this PR. Secrets and media remain outside Git.
 
 ---
 
@@ -10,7 +35,7 @@
 Build a web app where a user:
 
 1. Pastes a **YouTube URL** or selects a video file on a laptop or phone
-2. Clicks **Make karaoke video**
+2. Optionally previews the YouTube video, then clicks **Make karaoke video**
 3. Sees a **4-stage progress bar**: download → extract → stem → combine
 4. **Downloads** a karaoke MP4 (video + instrumental / no-vocals audio)
 
@@ -20,7 +45,7 @@ Build a web app where a user:
 
 ---
 
-## 2. Target architecture
+## 2. Current architecture
 
 ```mermaid
 sequenceDiagram
@@ -89,8 +114,8 @@ webapp-karaoke/
   README.md           # Quick start
 ```
 
-**Modal app name (dev):** `karaoke-maker-dev`
-**Deployed:** https://modal.com/apps/kittipatkampa/main/deployed/karaoke-maker-dev
+**Modal app names:** `karaoke-maker-dev` for local/hybrid development; `karaoke-maker-prod` for the deployed Cloud Run app.
+**Production:** https://modal.com/apps/kittipatkampa/main/deployed/karaoke-maker-prod
 
 ---
 
@@ -141,9 +166,9 @@ webapp-karaoke/
 - **CPU:** `run_job` (legacy full pipeline on Modal; cloud YouTube metadata requests failed even with dedicated cookies)
 - **CPU:** `run_staged_job` (hybrid path: reads uploaded files from Volume, stems + muxes)
 - **CPU:** `run_uploaded_job` (device file staged in Volume: duration check, extract, stem + mux)
-- **Volume:** `karaoke-maker-dev-work` at `/data/karaoke/jobs/{id}/`
-- **Dict:** `karaoke-maker-dev-jobs`
-- **Cron:** `cleanup_old_jobs` (24h)
+- **Volume:** `${KARAOKE_MODAL_APP}-work` at `/data/karaoke/jobs/{id}/`
+- **Dict:** `${KARAOKE_MODAL_APP}-jobs`
+- **Cron:** `cleanup_old_jobs` every six hours, deleting jobs older than 24 hours
 - Optional secrets via `MODAL_SECRETS` (comma-separated names)
 
 ### Tests
@@ -151,10 +176,11 @@ webapp-karaoke/
 - `make test` — URL, progress, access gate, GCP dispatch, stale jobs, API smoke (17 passed, 2 integration tests skipped on 2026-10-06)
 - `RUN_PIPELINE_INTEGRATION=1` — full local pipeline on test Short (~21s MPS)
 - `RUN_MODAL_SMOKE=1` — live Modal hybrid API test; `MODAL_SMOKE_JOB_ID=<completed ID>` rechecks an existing job without a new GPU run
+- Frontend production build and lint passed after the preview/theme changes. Live desktop browser checks confirmed the YouTube thumbnail/player, both action labels, Light/Dark appearance, and theme persistence after reload. These UI checks did not submit a new processing job.
 
 ### GCP
 
-- Project `karaoke-machine-kk-20261006` under `kittipat@gmail.com`, with billing linked, service accounts and three secrets in place.
+- Project `karaoke-machine-kk-20261006` under `kittipat@gmail.com`, with billing linked, service accounts and four secrets in place: Modal token ID/secret, family access code, and dedicated YouTube cookies. Never copy secret values into docs or PRs.
 - Cloud Run API and frontend are deployed. Same-origin access unlock and a fresh device-file job passed (`87ea3a17d655`). Public URL jobs `1f00211a9ef5` (short) and `69eea516931d` (three minutes) also reached `done`; the latter full MP4 was 180.29 seconds with AV1 video and AAC audio. The GCP job used dedicated cookies in a Secret Manager mount, private GCS input, and the existing Modal GPU pipeline.
 
 ---
@@ -244,7 +270,7 @@ The test output was a 16.89-second VP9/AAC MP4. The opt-in smoke test passed aga
 
 The same hybrid smoke test passed against `karaoke-maker-prod` on 2026-10-06 (job `a04fe3cb179d`, 55.06 seconds including test polling and output download). This verifies production Modal stem/mux once the input is downloaded on this Mac.
 
-### P1 — Production GCP (device-file path verified)
+### P1 — Production GCP (URL and device-file paths verified)
 
 - [x] Install `gcloud`; create project `karaoke-machine-kk-20261006` under `kittipat@gmail.com` with billing
 - [x] Run `deploy/setup-gcp.sh`, build both images, and deploy backend/frontend to Cloud Run
@@ -253,6 +279,8 @@ The same hybrid smoke test passed against `karaoke-maker-prod` on 2026-10-06 (jo
 - [x] Add the dedicated YouTube cookie file to Modal and deploy `karaoke-maker-prod`; Cloud Run points to it
 - [x] Public device-file path: private GCS resumable upload, API staging, Modal CPU/GPU, and MP4 download (job `87ea3a17d655`; API returned 206 for a range request). The user must first save the video file on the device.
 - [x] Public URL path: GCP Cloud Run download job → private GCS → Modal processing → full MP4. Fresh jobs `1f00211a9ef5` and `69eea516931d` passed. The latter was downloaded and checked with FFprobe (180.29 seconds, AV1/AAC).
+- [x] Source video preview appears when a valid YouTube URL is entered; live desktop thumbnail/player verified.
+- [x] Both input buttons say “Make karaoke video”; Light/Dark selector is in the shared header, and saved selection survived a live browser reload.
 - [ ] Verify the complete file selection and playback flow in a phone browser. Cookie-backed Modal URL jobs `f472aa272f49`, `3578735a4611`, and `a71e1eec2052` had failed during metadata lookup; the GCP route avoids that worker but has only two successful app inputs so far.
 
 ### P2 — Hardening
@@ -295,7 +323,7 @@ The same hybrid smoke test passed against `karaoke-maker-prod` on 2026-10-06 (jo
 ### Agent D — “Pipeline quality”
 
 1. `pipeline/stages.py` — demucs progress, mux fallbacks
-2. Run: `RUN_PIPELINE_INTEGRATION=1 make test` (from `backend/`)
+2. Run: `RUN_PIPELINE_INTEGRATION=1 make test` (from `webapp-karaoke/`; this downloads/processes a real video)
 
 ---
 
@@ -321,7 +349,19 @@ curl -s http://127.0.0.1:8000/healthz
 
 ```bash
 cd webapp-karaoke && make test
+npm --prefix frontend run build
+npm --prefix frontend run lint
 ```
+
+**Frontend-only production deployment** (from `webapp-karaoke/`)
+
+```bash
+PROJECT_ID=karaoke-machine-kk-20261006 \
+  BACKEND_URL=https://karaoke-api-omadfssjbq-uc.a.run.app \
+  bash deploy/deploy-frontend.sh
+```
+
+For backend/downloader configuration, cookie rotation, and deploy order, use `deploy/README.md`. To roll back a Cloud Run release, route traffic to a known previous revision, for example `gcloud run services update-traffic karaoke-web --project=karaoke-machine-kk-20261006 --region=us-central1 --to-revisions=karaoke-web-00005-j7g=100` (keeps the source preview but predates themes). A Git merge alone does not redeploy the services.
 
 **Modal deploy**
 

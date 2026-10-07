@@ -1,6 +1,6 @@
 # GCP deployment
 
-Deploy order: **Modal → backend → frontend**. The frontend proxies `/api` to the backend, so the browser keeps one origin for the access cookie and video playback.
+Deploy order: **GCP setup/bucket → Modal → YouTube downloader job → backend → frontend**. The frontend proxies `/api` to the backend, so the browser keeps one origin for the access cookie and video playback.
 
 ## Prerequisites
 
@@ -17,12 +17,12 @@ export FRONTEND_ORIGIN=https://karaoke-web-omadfssjbq-uc.a.run.app
 
 4. The dedicated Netscape-format YouTube cookie file has been stored as Modal secret `youtube-cookies` (`YTDLP_COOKIES_B64`), and `karaoke-maker-prod` is deployed with it. Keep the source file and secret values out of Git.
 5. The same dedicated cookie file is stored as GCP Secret Manager secret `karaoke-youtube-cookies` for the download job. It is mounted read-only, then copied to an owner-only temporary file before yt-dlp runs.
-5. Secret Manager entries:
+6. Other Secret Manager entries:
    - `modal-token-id`, `modal-token-secret` (from Modal settings)
    - `karaoke-access-code` (one shared family code; stored as a secure, HTTP-only cookie after entry)
    - Planned: Modal `gcp-upload` with `GCP_SERVICE_ACCOUNT_JSON` and env `GCS_OUTPUT_BUCKET` for direct GCS output
 
-The three GCP secrets and dedicated `karaoke-api` and `karaoke-web` service accounts have been created. The API account has Secret Manager access only to those three secrets. The current local access code is in `webapp-karaoke/.data/access-code.txt` (ignored by Git).
+Four GCP secrets and dedicated `karaoke-api`, `karaoke-web`, and `karaoke-downloader` service accounts have been created. The API account reads the Modal token pair and access code; the downloader reads the token pair and YouTube cookies. The current local access code is in `webapp-karaoke/.data/access-code.txt` (ignored by Git).
 
 ## One-time setup
 
@@ -72,7 +72,7 @@ export BACKEND_URL=https://karaoke-api-omadfssjbq-uc.a.run.app
 ./deploy/deploy-frontend.sh
 ```
 
-The current frontend is `https://karaoke-web-omadfssjbq-uc.a.run.app` (revision `karaoke-web-00004-vfg`). Its `/api` proxy and access cookie work. A fresh file upload completed as job `87ea3a17d655`. Fresh URL jobs `1f00211a9ef5` (short) and `69eea516931d` (three minutes) reached `done`, returned 206 MP4 range responses, and the full three-minute output had valid video/audio streams. No phone-specific UI test has been run yet.
+The current frontend is `https://karaoke-web-omadfssjbq-uc.a.run.app` (revision `karaoke-web-00006-tbx`, rechecked 2026-10-06 Pacific). It includes source YouTube previews, matching “Make karaoke video” buttons, and a persistent Light/Dark selector in the shared header. Its `/api` proxy and access cookie work. A fresh file upload completed as job `87ea3a17d655`. Fresh URL jobs `1f00211a9ef5` (short) and `69eea516931d` (three minutes) reached `done`, returned 206 MP4 range responses, and the full three-minute output had valid video/audio streams. Desktop preview/theme checks passed; no phone-specific UI test has been run yet.
 
 ## Hardening
 
