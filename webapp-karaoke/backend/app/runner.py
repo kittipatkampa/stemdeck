@@ -130,6 +130,18 @@ class ModalRunner(JobRunner):
         else:
             self._fn.spawn(job_id, url)
 
+    def reserve_gcp_download(self, job_id: str) -> None:
+        self._set(
+            job_id,
+            status="queued",
+            stage="download",
+            stage_progress=0.0,
+            overall_progress=0.0,
+            title=None,
+            error=None,
+            created_at=time.time(),
+        )
+
     def reserve_upload(self, job_id: str, title: str) -> None:
         if self._dict.get(job_id) is not None:
             raise ValueError("Job already started")

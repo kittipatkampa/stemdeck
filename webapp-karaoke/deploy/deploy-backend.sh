@@ -6,6 +6,7 @@ set -euo pipefail
 : "${KARAOKE_MODAL_APP:=karaoke-maker-prod}"
 : "${MODAL_LOCAL_DOWNLOAD:=0}"
 : "${FRONTEND_ORIGIN:?Set FRONTEND_ORIGIN to the deployed web URL}"
+: "${DOWNLOAD_REGION:=us-west1}"
 
 if [[ "$MODAL_LOCAL_DOWNLOAD" != "0" ]]; then
   echo "Cloud Run deployment requires MODAL_LOCAL_DOWNLOAD=0; background download threads are not durable." >&2
@@ -34,7 +35,7 @@ gcloud run deploy karaoke-api \
   --max-instances=1 \
   --concurrency=10 \
   --service-account="karaoke-api@${PROJECT_ID}.iam.gserviceaccount.com" \
-  --set-env-vars="PIPELINE=modal,MODAL_LOCAL_DOWNLOAD=0,KARAOKE_MODAL_APP=${KARAOKE_MODAL_APP},MAX_CONCURRENT_JOBS=1,GCS_UPLOAD_BUCKET=${PROJECT_ID}-karaoke-output,FRONTEND_ORIGIN=${FRONTEND_ORIGIN},ENABLE_YOUTUBE_URLS=0" \
+  --set-env-vars="PIPELINE=modal,MODAL_LOCAL_DOWNLOAD=0,KARAOKE_MODAL_APP=${KARAOKE_MODAL_APP},MAX_CONCURRENT_JOBS=1,GCS_UPLOAD_BUCKET=${PROJECT_ID}-karaoke-output,FRONTEND_ORIGIN=${FRONTEND_ORIGIN},ENABLE_YOUTUBE_URLS=1,GCP_PROJECT_ID=${PROJECT_ID},GCP_DOWNLOAD_REGION=${DOWNLOAD_REGION},GCP_DOWNLOAD_JOB_NAME=karaoke-youtube-download" \
   --set-secrets="MODAL_TOKEN_ID=modal-token-id:latest,MODAL_TOKEN_SECRET=modal-token-secret:latest,ACCESS_CODE=karaoke-access-code:latest"
 
 gcloud run services describe karaoke-api --project="$PROJECT_ID" --region="$REGION" --format='value(status.url)'

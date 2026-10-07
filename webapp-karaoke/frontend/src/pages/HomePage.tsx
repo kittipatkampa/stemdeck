@@ -7,7 +7,7 @@ const YOUTUBE_HINT =
   /^(https?:\/\/)?(www\.)?(youtube\.com|youtu\.be|m\.youtube\.com)\/.+/i;
 
 export function HomePage() {
-  const [url, setUrl] = useState('https://youtube.com/shorts/senFAeo0RQM');
+  const [url, setUrl] = useState('');
   const [file, setFile] = useState<File | null>(null);
   const [capabilities, setCapabilities] = useState<Capabilities | null>(null);
   const [uploadProgress, setUploadProgress] = useState<number | null>(null);
@@ -69,8 +69,25 @@ export function HomePage() {
   return (
     <main className="page">
       <h1>Karaoke Maker</h1>
-      <p className="subtitle">Choose a video and get an MP4 without vocals.</p>
-      {capabilities?.file_upload && <form className="url-form" onSubmit={onUpload}>
+      <p className="subtitle">Make a karaoke MP4 without vocals.</p>
+      {capabilities?.youtube_url && <form className="url-form input-panel" onSubmit={onSubmit}>
+        <h2>Paste a YouTube link</h2>
+        <p className="muted">We’ll download the video in the cloud, then make your karaoke version.</p>
+        <label htmlFor="url">YouTube video URL</label>
+        <input
+          id="url"
+          type="url"
+          value={url}
+          onChange={(e) => setUrl(e.target.value)}
+          placeholder="https://youtube.com/watch?v=..."
+          disabled={loading}
+        />
+        <button type="submit" disabled={loading}>
+          {loading ? 'Starting download…' : 'Download and make karaoke'}
+        </button>
+      </form>}
+      {capabilities?.file_upload && <form className="url-form input-panel" onSubmit={onUpload}>
+        <h2>Upload a video file</h2>
         <label htmlFor="video-file">Video on your laptop or phone</label>
         <input
           id="video-file"
@@ -85,24 +102,7 @@ export function HomePage() {
           {preparing ? 'Preparing video…' : loading ? `Uploading ${Math.round((uploadProgress ?? 0) * 100)}%…` : 'Make karaoke video'}
         </button>
       </form>}
-      {capabilities?.youtube_url && <form className="url-form" onSubmit={onSubmit}>
-        <label htmlFor="url">YouTube URL</label>
-        <input
-          id="url"
-          type="url"
-          value={url}
-          onChange={(e) => setUrl(e.target.value)}
-          placeholder="https://youtube.com/watch?v=..."
-          disabled={loading}
-        />
-        <button type="submit" disabled={loading}>
-          {loading ? 'Starting…' : 'Make it'}
-        </button>
-      </form>}
       {!capabilities && !error && <p className="muted">Loading…</p>}
-      {capabilities?.file_upload && !capabilities.youtube_url && (
-        <p className="muted">Save a video to your device first, then choose it here.</p>
-      )}
       {error && <p className="error" role="alert">{error}</p>}
     </main>
   );

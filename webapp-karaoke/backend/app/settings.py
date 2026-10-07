@@ -37,7 +37,10 @@ def get_upload_bucket() -> str | None:
 
 
 def youtube_urls_enabled() -> bool:
-    return os.environ.get("ENABLE_YOUTUBE_URLS", "1").lower() in ("1", "true", "yes")
+    enabled = os.environ.get("ENABLE_YOUTUBE_URLS", "1").lower() in ("1", "true", "yes")
+    if get_pipeline_mode() == "modal" and not modal_local_download():
+        return enabled and bool(os.environ.get("GCP_DOWNLOAD_JOB_NAME"))
+    return enabled
 
 
 def get_storage_mode() -> str:

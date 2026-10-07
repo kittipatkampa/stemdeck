@@ -1,6 +1,6 @@
 # Karaoke web app
 
-Turn a video into a vocal-free karaoke MP4. The public app accepts a video file selected on a laptop or phone. Local development also accepts a YouTube URL. Frontend (Vite + React) talks to a thin FastAPI backend; heavy work runs locally (default) or on [Modal](https://modal.com) serverless GPU.
+Turn a video into a vocal-free karaoke MP4. The public app accepts a YouTube URL or a video file from a laptop or phone. Frontend (Vite + React) talks to a thin FastAPI backend; a GCP job downloads YouTube videos, and [Modal](https://modal.com) runs vocal separation and video assembly.
 
 ## Prerequisites
 
@@ -39,11 +39,14 @@ Jobs and outputs are stored under `webapp-karaoke/.data/` (gitignored).
 | `MAX_DURATION_SEC` | `600` | Max video length |
 | `ACCESS_CODE` | unset | When set, require a shared code before API jobs and downloads |
 | `GCS_UPLOAD_BUCKET` | unset | Enables browser-to-GCS video uploads in Modal mode |
-| `ENABLE_YOUTUBE_URLS` | `1` | Set to `0` on Cloud Run while YouTube rejects Modal metadata requests |
+| `ENABLE_YOUTUBE_URLS` | `1` | Public URL form also requires `GCP_DOWNLOAD_JOB_NAME` |
+| `GCP_DOWNLOAD_JOB_NAME` | unset | Cloud Run Job used for YouTube downloads in production |
+| `GCP_DOWNLOAD_REGION` | `us-west1` | Region of the download job |
+| `GCP_PROJECT_ID` | unset | GCP project containing the download job |
 
 ## Modal (serverless GPU)
 
-YouTube has blocked downloads from the Modal cloud IP in testing. The dedicated YouTube account's Netscape-format `cookies.txt` is stored in the Modal `youtube-cookies` secret as `YTDLP_COOKIES_B64` (never in Git). The production Modal app uses that secret, but cloud metadata lookup still fails. The public app therefore accepts a file already saved on the user's device and uploads it directly to private GCS. The API stages it in the Modal Volume; the Modal CPU extracts tracks, the GPU separates vocals, and the CPU combines the MP4.
+YouTube rejected metadata requests from the original Modal downloader. The public URL path now starts a Cloud Run Job in `us-west1` with yt-dlp, EJS, Deno, FFmpeg, and the dedicated YouTube cookies. It downloads to private GCS, stages the file in the Modal Volume, and starts `run_uploaded_job`. The browser file upload remains available. The public URL path completed fresh short and three-minute jobs on 2026-10-06; this verifies those inputs, not general YouTube reliability.
 
 Deploy (attach secrets with `MODAL_SECRETS`):
 
@@ -58,7 +61,7 @@ cd backend
 PIPELINE=modal uv run uvicorn app.main:app --reload --port 8000
 ```
 
-`MODAL_LOCAL_DOWNLOAD=0` makes Modal perform the full download; this is the current Cloud Run configuration but is blocked at YouTube. The default hybrid mode downloads on the API host, uploads extracted files to a Modal Volume, and runs the stem and mux steps there; this mode completed a fresh local-to-Modal job.
+`MODAL_LOCAL_DOWNLOAD=0` delegates URL downloads to the configured GCP job in Cloud Run. Without `GCP_DOWNLOAD_JOB_NAME`, the API hides the URL form. The default local hybrid mode downloads on the API host, uploads extracted files to a Modal Volume, and runs the stem and mux steps there.
 
 To repeat the live hybrid smoke test after deploying Modal, run `RUN_MODAL_SMOKE=1 make test`. Set `MODAL_SMOKE_JOB_ID=<completed ID>` to verify status and download for an existing job without starting another GPU run.
 
@@ -70,7 +73,7 @@ make test
 
 ## Cloud staging
 
-The staging frontend is [Dad's Karaoke](https://karaoke-web-omadfssjbq-uc.a.run.app). It uses a family access code and points to `karaoke-maker-prod`. A fresh 21 MB device-file upload completed as job `87ea3a17d655` on 2026-10-06, including browser CORS preflight, direct GCS PUT, Modal processing, and an MP4 range response. The user must first save the video file on the device; a web page cannot automatically download YouTube media from a pasted URL. See [deploy/README.md](deploy/README.md) for deployment details.
+The staging frontend is [Dad's Karaoke](https://karaoke-web-omadfssjbq-uc.a.run.app). It uses a family access code and points to `karaoke-maker-prod`. A device-file upload completed as job `87ea3a17d655`. Fresh URL jobs `1f00211a9ef5` (short) and `69eea516931d` (three minutes) also completed through GCP download, private GCS, Modal, and MP4 download. The three-minute output was validated with FFprobe as 180.29 seconds of video and audio. See [deploy/README.md](deploy/README.md) for deployment details.
 
 For multi-agent handoff (architecture, pitfalls, backlog), see **[docs/HANDOFF.md](docs/HANDOFF.md)**.
 

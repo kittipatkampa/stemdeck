@@ -16,6 +16,7 @@ from pydantic import BaseModel, Field
 
 from app import job_state
 from app.access import access_code, is_authorized, require_access, unlock
+from app.gcp_download import download_job_name, start_download
 from app.runner import ModalRunner, active_job_count, get_runner
 from app.settings import (
     PIPELINE_ROOT,
@@ -126,7 +127,7 @@ def create_job(req: CreateJobRequest, request: Request) -> dict[str, str]:
     if not youtube_urls_enabled():
         raise HTTPException(status_code=503, detail="YouTube links are temporarily unavailable; upload a video file instead")
     try:
-        validate_youtube_url(req.url)
+        canonical_url = validate_youtube_url(req.url)
     except PipelineError as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
 
@@ -137,7 +138,15 @@ def create_job(req: CreateJobRequest, request: Request) -> dict[str, str]:
     if get_pipeline_mode() == "local":
         job_state.init_job(job_id, req.url)
     runner = get_runner()
-    runner.start(job_id, req.url)
+    if isinstance(runner, ModalRunner) and download_job_name():
+        runner.reserve_gcp_download(job_id)
+        try:
+            start_download(job_id, canonical_url)
+        except Exception as e:
+            runner.fail_upload(job_id, "Could not start YouTube download")
+            raise HTTPException(status_code=502, detail=f"Could not start YouTube download: {e}") from e
+    else:
+        runner.start(job_id, canonical_url)
     return {"job_id": job_id, "status": "queued"}
 
 
